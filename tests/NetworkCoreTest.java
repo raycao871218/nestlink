@@ -38,4 +38,3 @@ public final class NetworkCoreTest {
         System.out.println("PASS gateway selection, peer routing, ARP queue/reply, malformed packets, cache invalidation, strict IPv4 validation");
     }
 }
-
