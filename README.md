@@ -12,7 +12,23 @@ HarborLink 是一个 Android 客户端：内置 ZeroTier 隧道，通过家中 N
 - **自动验收连接**：获得虚拟地址后，在 VPN 网络内检查 NAS TCP 端口，再执行经过系统证书验证的 HTTPS 请求。两项通过才显示“已连接”。
 - **持续检查**：后台服务每 20 秒发起检测。失败显示“连接待恢复”；网络切换会清除旧结果，重新验证。检测耗时另计。
 - **默认用户模式**：仅显示连接状态、家庭网络与互联网可用性。设置中开启开发者模式后，才显示节点、路径、错误与诊断工具。
-- **Moon 支持**：保存最多 8 个 World ID / Seed ID，连接时自动加载。
+- **扫码入网**：相机或本地图片识别二维码，确认后填入设置；也可显示当前网络的入网码供其他设备扫描。
+- **Moon 支持**：设置页只显示配置数量，点击后管理简短节点列表；完整 World / Seed 仅在开发者模式显示。支持最多 8 个节点，连接时自动加载。
+
+## 扫码入网
+
+在“设置”中点击“扫码入网”。支持相机实时扫描和“从图片识别”；识别在设备本地完成，不上传图片、不依赖 Google Play Services。只在进入扫描时请求相机权限；拒绝权限仍能选择图片。
+
+支持的内容：
+
+- 16 位 ZeroTier 网络 ID。
+- `zerotier://<network-id>` 或 `zerotier://network/<network-id>`。
+- `https://my.zerotier.com/network/<network-id>` 和 `https://central.zerotier.com/networks/<network-id>`，仅解析 ID，不打开网页。
+- `harborlink://join?network=<id>&gateway=<ipv4>&port=7890&moons=<URL编码的Moon列表>`。
+
+识别后会显示网络 ID 与可选的 NAS / Moon 参数。点击“填入设置”，再保存和连接。只有网络 ID 的二维码会保留现有 NAS 参数；二维码不替代 Controller 设备授权，也不自动改变 NAS 或网络成员权限。网络 ID 本身不足以自动发现 NAS 出口，新用户仍需填写 NAS 网关。
+
+“显示入网码”会用当前填写的连接参数生成二维码，供另一台设备扫描；不包含设备身份、密码、订阅或管理 API Token。
 
 ## 工作方式
 
@@ -41,6 +57,7 @@ JDK 17、Gradle 8.8、Android SDK 34 / Build Tools 34.0.0、NDK 27.2.12479018、
 # 配置 ANDROID_HOME，或在 local.properties 填写 sdk.dir
 ./gradlew :app:assembleDebug :app:lintDebug
 python3 tools/test_core.py
+python3 tools/test_qr.py
 ```
 
 Windows CMake/Ninja 需要本地盘或映射盘路径，不支持直接在 UNC 目录链接。

@@ -8,6 +8,7 @@ public final class MoonSettings {
     public static final class Moon {
         public final long world, seed;
         Moon(long world,long seed) { this.world=world; this.seed=seed; }
+        public String displayId() { return world==seed?String.format(Locale.ROOT,"%010x",world):Long.toUnsignedString(world,16); }
         public String line() { return String.format(Locale.ROOT,"%016x %010x",world,seed); }
     }
     public static List<Moon> parse(String text) {

@@ -21,3 +21,14 @@ Automated pure-Java tests cover stale success, stale failure, partial connectivi
 - APK signature verification passed. NAS configuration was not changed by this UI update.
 
 No reboot endurance, battery soak, or universal site/protocol coverage is claimed. CI is provided for reproducible build/lint/core tests; hosted CI status is separate from these local results.
+
+## 0.5.0 QR onboarding and Moon presentation
+
+- Added offline QR scanning from the rear camera and the system image picker, with a shared ZXing decoder. Camera permission is requested only when entering scanning; photo import remains available after denial.
+- Payload tests cover plain IDs, supported ZeroTier links and HarborLink full configuration roundtrips, plus invalid IDs, duplicate fields, arbitrary URLs, invalid gateways/ports/Moons and oversized input.
+- Decoder tests cover camera luminance and image pixels, 0/90/180/270 degree rotations, inverted codes, absent and truncated input.
+- On the physical Android device, the rear camera opened successfully. Picking a generated test QR from Downloads produced the expected configuration confirmation. Confirming filled draft fields; saved settings were unchanged until explicitly saved. Dismissing those drafts preserved the original configuration. Network QR display also worked.
+- Moon settings now use a compact count/management entry and one short ID per node; full World/Seed details are restricted to developer mode. Existing saved node definitions and orbit behavior are preserved.
+- Live camera-to-physical-QR decoding was not independently exercised; the shared camera-frame decoder and actual camera lifecycle were tested separately.
+
+- Final 0.5.0 build/lint and APK signature verification passed. On-device Moon settings showed one compact summary; its manager displayed one short ID without World/Seed duplication. Adding the existing ID kept one entry. Original saved connection settings were retained.

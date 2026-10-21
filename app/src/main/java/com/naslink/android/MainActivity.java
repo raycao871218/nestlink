@@ -19,11 +19,16 @@ public final class MainActivity extends Activity {
     private LinearLayout developerPanel;
     private Button action;
     private HarborView harbor;
+    private Bundle draftSettings;
+    private EditText editNetwork,editGateway,editPort,editMoons;
+    private AlertDialog settingsDialog;
+    private Button moonSummary;
     private final Runnable refresh=new Runnable() { public void run() { render(); handler.postDelayed(this,1000); } };
     private SharedPreferences settings() { return getSharedPreferences("connection",0); }
     private SharedPreferences status() { return getSharedPreferences("status",0); }
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
+        if(saved!=null) draftSettings=saved.getBundle("draftSettings");
         getWindow().setStatusBarColor(paper); getWindow().setNavigationBarColor(paper);
         // Preserve an earlier install's explicitly configured proxy port.
         if(!settings().contains("port")) {
@@ -67,6 +72,10 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onResume() { super.onResume(); handler.removeCallbacks(refresh); refresh.run(); }
     @Override protected void onPause() { handler.removeCallbacks(refresh); super.onPause(); }
+    @Override protected void onSaveInstanceState(Bundle out) {
+        if(settingsDialog!=null && settingsDialog.isShowing()) captureDraft();
+        out.putBundle("draftSettings",draftSettings);super.onSaveInstanceState(out);
+    }
     @Override protected void onDestroy() { handler.removeCallbacksAndMessages(null); super.onDestroy(); }
     private void render() {
         boolean active=TunnelService.alive;
@@ -98,7 +107,7 @@ public final class MainActivity extends Activity {
         device.setVisibility(active && (phase.equals("authorization")||phase.equals("joining")) && !node.isEmpty()?View.VISIBLE:View.GONE);
         device.setText("设备 ID："+node+"  ·  供管理端授权");
         boolean dev=settings().getBoolean("developer",false); developerPanel.setVisibility(dev?View.VISIBLE:View.GONE);
-        mode.setText(dev?"开发者模式 · HarborLink 0.4.0":"归港 · 私有连接，自在访问");
+        mode.setText(dev?"开发者模式 · HarborLink 0.5.0":"归港 · 私有连接，自在访问");
         if(dev) diagnostics.setText("状态："+s.getString("message","")+"\n设备："+node+"\n地址："+s.getString("address","")+"\n"+s.getString("healthLog","")+"\n"+s.getString("moons","")+"\n"+s.getString("diagnostics",""));
         else diagnostics.setText("");
     }
@@ -116,23 +125,88 @@ public final class MainActivity extends Activity {
     private void requestVpn() { Intent permission=VpnService.prepare(this); if(permission!=null) startActivityForResult(permission,41); else startTunnel(); }
     private void startTunnel() { startForegroundService(new Intent(this,TunnelService.class)); handler.postDelayed(this::render,250); }
     @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] results) { super.onRequestPermissionsResult(request,permissions,results); if(request==42) requestVpn(); }
-    @Override protected void onActivityResult(int request,int result,Intent data) { super.onActivityResult(request,result,data); if(request==41 && result==RESULT_OK) startTunnel(); }
+    @Override protected void onActivityResult(int request,int result,Intent data) {
+        super.onActivityResult(request,result,data);
+        if(request==41 && result==RESULT_OK) startTunnel();
+        if(request==63) {
+            showSettings();
+            if(result==RESULT_OK && data!=null) {
+                try { confirmQr(QrPayload.parse(data.getStringExtra("qr"))); }
+                catch(IllegalArgumentException e) {Toast.makeText(this,e.getMessage(),Toast.LENGTH_LONG).show();}
+            }
+        }
+    }
+    private void captureDraft() {
+        if(editNetwork==null) return;
+        draftSettings=new Bundle();draftSettings.putString("network",editNetwork.getText().toString());
+        draftSettings.putString("gateway",editGateway.getText().toString());draftSettings.putString("port",editPort.getText().toString());
+        draftSettings.putString("moons",editMoons.getText().toString());
+    }
+    private void scanNetwork() {
+        if(TunnelService.alive) {Toast.makeText(this,"请先断开连接，再扫码修改网络。",Toast.LENGTH_LONG).show();return;}
+        captureDraft();settingsDialog.dismiss();startActivityForResult(new Intent(this,ScanActivity.class),63);
+    }
+    private void confirmQr(QrPayload payload) {
+        String summary="ZeroTier 网络：\n"+payload.network;
+        if(payload.gateway!=null) summary+="\n\nNAS 网关："+payload.gateway;
+        if(payload.port!=null) summary+="\n代理端口："+payload.port;
+        if(payload.moons!=null) summary+="\nMoon："+(payload.moons.isEmpty()?"无（将清空已有设置）":payload.moons);
+        summary+="\n\n确认后填入设置，保存并连接即可入网。首次仍需管理端授权。";
+        new AlertDialog.Builder(this).setTitle("识别到入网配置").setMessage(summary)
+            .setPositiveButton("填入设置",(dialog,which) -> {
+                if(TunnelService.alive) return;
+                editNetwork.setText(payload.network);
+                if(payload.gateway!=null) editGateway.setText(payload.gateway);
+                if(payload.port!=null) editPort.setText(String.valueOf(payload.port));
+                if(payload.moons!=null) editMoons.setText(payload.moons);
+            }).setNegativeButton("取消",null).show();
+    }
+    private void showNetworkCode() {
+        try {
+            String value=QrPayload.encode(editNetwork.getText().toString().trim(),editGateway.getText().toString().trim(),Integer.parseInt(editPort.getText().toString().trim()),MoonSettings.format(MoonSettings.parse(editMoons.getText().toString())));
+            java.util.Map<com.google.zxing.EncodeHintType,Object> hints=new java.util.EnumMap<>(com.google.zxing.EncodeHintType.class);
+            hints.put(com.google.zxing.EncodeHintType.CHARACTER_SET,"UTF-8");hints.put(com.google.zxing.EncodeHintType.MARGIN,3);
+            com.google.zxing.common.BitMatrix matrix=new com.google.zxing.qrcode.QRCodeWriter().encode(value,com.google.zxing.BarcodeFormat.QR_CODE,768,768,hints);
+            Bitmap bitmap=Bitmap.createBitmap(768,768,Bitmap.Config.ARGB_8888);int[] pixels=new int[768*768];
+            for(int y=0;y<768;y++) for(int x=0;x<768;x++) pixels[y*768+x]=matrix.get(x,y)?Color.BLACK:Color.WHITE;
+            bitmap.setPixels(pixels,0,768,0,0,768,768);
+            LinearLayout body=column();body.setPadding(dp(20),0,dp(20),dp(12));ImageView image=new ImageView(this);image.setImageBitmap(bitmap);image.setAdjustViewBounds(true);image.setContentDescription("家庭网络入网二维码");body.addView(image,new LinearLayout.LayoutParams(-1,dp(270)));
+            add(body,text("包含网络 ID、NAS 网关与 Moon 配置。请用另一台设备扫码；首次入网仍需管理端授权。",13,muted),12);
+            new AlertDialog.Builder(this).setTitle("家庭网络入网码").setView(body).setPositiveButton("关闭",null).show();
+        } catch(Exception e) {Toast.makeText(this,"请先填写有效的网络 ID、NAS 网关、端口与 Moon 设置。",Toast.LENGTH_LONG).show();}
+    }
     private void showSettings() {
         ScrollView scroll=new ScrollView(this); LinearLayout body=column(); body.setPadding(dp(22),dp(8),dp(22),dp(16)); scroll.addView(body);
         add(body,text("连接你的家庭网络",14,muted),0);
-        EditText network=field(body,"ZeroTier 网络 ID",settings().getString("network",""));
-        EditText gateway=field(body,"NAS 的 ZeroTier IPv4",settings().getString("gateway",""));
-        EditText port=field(body,"NAS 代理端口",String.valueOf(settings().getInt("port",7890))); port.setInputType(2);
-        EditText moons=field(body,"Moon（可选，每行一个 ID）",settings().getString("moons","")); moons.setSingleLine(false); moons.setMinLines(2); moons.setGravity(Gravity.TOP);
-        add(body,text("Moon 可填写 World ID 或 World ID + Seed ID。修改网络参数前请先断开。",12,muted),8);
+        LinearLayout qrActions=new LinearLayout(this);
+        Button scan=button("扫码入网",paper,mint),code=button("显示入网码",paper,ink);
+        qrActions.addView(scan,new LinearLayout.LayoutParams(0,dp(50),1));
+        LinearLayout.LayoutParams codeParams=new LinearLayout.LayoutParams(0,dp(50),1);codeParams.leftMargin=dp(8);qrActions.addView(code,codeParams);add(body,qrActions,14);
+        scan.setEnabled(!TunnelService.alive);scan.setOnClickListener(v -> scanNetwork());code.setOnClickListener(v -> showNetworkCode());
+        EditText network=editNetwork=field(body,"ZeroTier 网络 ID",settings().getString("network",""));
+        EditText gateway=editGateway=field(body,"NAS 的 ZeroTier IPv4",settings().getString("gateway",""));
+        EditText port=editPort=field(body,"NAS 代理端口",String.valueOf(settings().getInt("port",7890))); port.setInputType(2);
+        EditText moons=editMoons=new EditText(this);moons.setText(settings().getString("moons",""));
+        moonSummary=button("Moon 节点",paper,ink);add(body,moonSummary,18);moonSummary.setOnClickListener(v -> manageMoons());
+        moons.addTextChangedListener(new android.text.TextWatcher() {
+            public void beforeTextChanged(CharSequence value,int start,int count,int after) {}
+            public void onTextChanged(CharSequence value,int start,int before,int count) {updateMoonSummary();}
+            public void afterTextChanged(android.text.Editable value) {}
+        });updateMoonSummary();
+        if(draftSettings!=null) {
+            network.setText(draftSettings.getString("network",""));gateway.setText(draftSettings.getString("gateway",""));
+            port.setText(draftSettings.getString("port","7890"));moons.setText(draftSettings.getString("moons",""));draftSettings=null;
+        }
+        add(body,text("修改连接参数前请先断开。Moon 为可选配置。",12,muted),8);
         for(EditText field:new EditText[]{network,gateway,port,moons}) field.setEnabled(!TunnelService.alive);
         Switch developer=new Switch(this); developer.setText("开发者模式"); developer.setTextColor(ink); developer.setTextSize(15); developer.setChecked(settings().getBoolean("developer",false)); add(body,developer,22);
         add(body,text("开启后显示连接日志、节点路径与诊断工具。",12,muted),5);
         developer.setOnCheckedChangeListener((v,checked) -> { settings().edit().putBoolean("developer",checked).apply(); if(!checked) status().edit().remove("diagnostics").apply(); render(); });
         String id=status().getString("node","");
         if(!id.isEmpty()) { TextView identity=text("设备 ID："+id,12,muted); identity.setTextIsSelectable(true); add(body,identity,18); }
-        add(body,text("HarborLink · 归港  0.4.0\n一个 VPN，连接内网与 NAS 代理出口。",12,muted),18);
+        add(body,text("HarborLink · 归港  0.5.0\n一个 VPN，连接内网与 NAS 代理出口。",12,muted),18);
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle("连接设置").setView(scroll).setPositiveButton("保存",null).setNegativeButton("关闭",null).create();
+        settingsDialog=dialog;
         dialog.setOnShowListener(v -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(button -> {
             if(TunnelService.alive) { dialog.dismiss(); return; }
             try {
@@ -143,6 +217,50 @@ public final class MainActivity extends Activity {
                 settings().edit().putString("network",net).putString("gateway",nas).putInt("port",number).putString("moons",moon).apply(); dialog.dismiss(); render();
             } catch(Exception e) { Toast.makeText(this,e.getMessage(),Toast.LENGTH_LONG).show(); }
         })); dialog.show();
+    }
+    private void updateMoonSummary() {
+        if(moonSummary==null||editMoons==null) return;
+        try {int count=MoonSettings.parse(editMoons.getText().toString()).size();moonSummary.setText("Moon 节点   ·   "+(count==0?"未配置":count+" 个已配置")+"   ›");}
+        catch(IllegalArgumentException e) {moonSummary.setText("Moon 节点   ·   待检查   ›");}
+    }
+    private void manageMoons() {
+        java.util.List<MoonSettings.Moon> existing;
+        try {existing=MoonSettings.parse(editMoons.getText().toString());}
+        catch(IllegalArgumentException e) {Toast.makeText(this,e.getMessage(),Toast.LENGTH_LONG).show();return;}
+        final java.util.ArrayList<MoonSettings.Moon> nodes=new java.util.ArrayList<>(existing);
+        ScrollView scroll=new ScrollView(this);LinearLayout body=column();body.setPadding(dp(22),dp(6),dp(22),dp(14));scroll.addView(body);
+        add(body,text("可选节点，用于辅助设备发现。",13,muted),0);
+        LinearLayout list=column();add(body,list,14);
+        renderMoonRows(list,nodes);
+        EditText addId=field(body,"添加节点","");addId.setHint("Moon ID");addId.setEnabled(!TunnelService.alive);
+        EditText seed=null;
+        if(settings().getBoolean("developer",false)) {seed=field(body,"Seed ID（可选）","");seed.setEnabled(!TunnelService.alive);}
+        final EditText seedInput=seed;
+        Button add=button("添加 Moon",paper,mint);add(body,add,12);add.setEnabled(!TunnelService.alive);
+        add.setOnClickListener(v -> {
+            try {
+                String entry=addId.getText().toString().trim();
+                if(seedInput!=null&&!seedInput.getText().toString().trim().isEmpty()) entry+=" "+seedInput.getText().toString().trim();
+                if(entry.isEmpty()) throw new IllegalArgumentException("请填写 Moon ID。");
+                java.util.List<MoonSettings.Moon> parsed=MoonSettings.parse(MoonSettings.format(nodes)+"\n"+entry);
+                nodes.clear();nodes.addAll(parsed);editMoons.setText(MoonSettings.format(nodes));addId.setText("");if(seedInput!=null) seedInput.setText("");
+                renderMoonRows(list,nodes);
+                ((android.view.inputmethod.InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(addId.getWindowToken(),0);
+            } catch(IllegalArgumentException e) {Toast.makeText(this,e.getMessage(),Toast.LENGTH_LONG).show();}
+        });
+        add(body,text(TunnelService.alive?"连接中仅可查看；修改前请先断开。":"添加或移除后，保存连接设置即可生效。",12,muted),12);
+        new AlertDialog.Builder(this).setTitle("Moon 节点").setView(scroll).setPositiveButton("完成",null).show();
+    }
+    private void renderMoonRows(LinearLayout list,java.util.ArrayList<MoonSettings.Moon> nodes) {
+        list.removeAllViews();
+        if(nodes.isEmpty()) {add(list,text("尚未添加 Moon 节点",14,muted),8);return;}
+        for(MoonSettings.Moon moon:new java.util.ArrayList<>(nodes)) {
+            LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(0,dp(7),0,dp(7));
+            LinearLayout info=column();TextView label=text(moon.displayId(),15,ink);label.setTypeface(Typeface.MONOSPACE);add(info,label,0);
+            if(settings().getBoolean("developer",false)) add(info,text("World: "+Long.toUnsignedString(moon.world,16)+"\nSeed: "+String.format(java.util.Locale.ROOT,"%010x",moon.seed),11,muted),4);
+            row.addView(info,new LinearLayout.LayoutParams(0,-2,1));Button remove=button("移除",paper,muted);remove.setTextSize(12);row.addView(remove,new LinearLayout.LayoutParams(dp(62),dp(42)));remove.setEnabled(!TunnelService.alive);
+            remove.setOnClickListener(v -> {nodes.remove(moon);editMoons.setText(MoonSettings.format(nodes));renderMoonRows(list,nodes);});add(list,row,0);
+        }
     }
     private EditText field(LinearLayout parent,String label,String value) {
         add(parent,text(label,12,muted),16); EditText input=new EditText(this); input.setSingleLine(true); input.setTextSize(15); input.setTextColor(ink); input.setHintTextColor(muted); input.setHint(label); input.setText(value); input.setInputType(1|0x80000); input.setPadding(dp(12),dp(10),dp(12),dp(10)); input.setBackground(background(paper,12)); add(parent,input,6); return input;
