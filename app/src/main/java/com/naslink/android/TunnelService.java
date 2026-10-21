@@ -41,6 +41,7 @@ public final class TunnelService extends VpnService {
     private boolean starting;
     private File store;
     private long tx,rx,sendErrors,skippedIpv6;
+    private long moonObservedSince;
     private String wireError="",lastEvent="",wireNetwork="未绑定";
 
     @Override public int onStartCommand(Intent intent,int flags,int startId) {
@@ -49,6 +50,7 @@ public final class TunnelService extends VpnService {
         if(starting) return START_NOT_STICKY;
         starting=true;
         alive=true;
+        resetMoonConnectivity();
         getSharedPreferences("status",0).edit().putString("phase","joining").putBoolean("lanReady",false).putBoolean("internetReady",false).apply();
         try {
             if(prepare(this)!=null) throw new IllegalStateException("尚未授予 VPN 权限");
@@ -68,7 +70,7 @@ public final class TunnelService extends VpnService {
                 @Override public void onAvailable(Network n) { submit(() -> attachNetwork(n)); }
                 @Override public void onLost(Network n) { submit(() -> {
                     if(n.equals(physical)) {
-                        invalidateHealth("reconnecting"); closeUdp(); physical=null; setUnderlyingNetworks(null); publish("底层网络断开，等待恢复",true);
+                        invalidateHealth("reconnecting"); resetMoonConnectivity(); closeUdp(); physical=null; setUnderlyingNetworks(null); publish("底层网络断开，等待恢复",true);
                         for(Network candidate:connectivity.getAllNetworks()) {
                             if(candidate.equals(n)) continue;
                             NetworkCapabilities caps=connectivity.getNetworkCapabilities(candidate);
@@ -178,17 +180,33 @@ public final class TunnelService extends VpnService {
         prefs.edit().putString("appliedMoons",MoonSettings.format(configured)).apply();
         getSharedPreferences("status",0).edit().putString("moons",configured.isEmpty()?"未配置 Moon":"已提交 "+configured.size()+" 个 Moon，等待发现").apply();
     }
+    private void resetMoonConnectivity() {
+        moonObservedSince=System.currentTimeMillis();
+        getSharedPreferences("status",0).edit().remove("moonConnectivity").putLong("moonCheckedAt",0).apply();
+    }
     private void updateMoonStatus() {
         if(stopping || node==null) return;
         try {
-            int count=MoonSettings.parse(getSharedPreferences("connection",0).getString("moons","")).size();
-            if(count==0) return;
-            int discovered=0;
-            Peer[] peers=node.peers();
-            if(peers!=null) for(Peer peer:peers) if(peer.getRole()==PeerRole.PEER_ROLE_MOON) discovered++;
-            getSharedPreferences("status",0).edit().putString("moons","已提交 Moon："+count+" · 已发现 MOON 节点："+discovered+"（发现不等于路径在线）").apply();
+            java.util.List<MoonSettings.Moon> configured=MoonSettings.parse(getSharedPreferences("connection",0).getString("moons",""));
+            Peer[] peers=node.peers();org.json.JSONObject snapshot=new org.json.JSONObject();int online=0;
+            long now=System.currentTimeMillis();
+            for(MoonSettings.Moon moon:configured) {
+                Peer match=null;
+                if(peers!=null) for(Peer peer:peers) if(peer.getAddress()==moon.seed) {match=peer;break;}
+                long lastReceive=0;
+                if(match!=null && match.getPaths()!=null) for(PeerPhysicalPath path:match.getPaths()) lastReceive=Math.max(lastReceive,path.getLastReceive());
+                String state=MoonConnectivity.state(match!=null,match!=null && match.getRole()==PeerRole.PEER_ROLE_MOON,lastReceive,now,moonObservedSince);
+                if("online".equals(state)) online++;
+                org.json.JSONObject entry=new org.json.JSONObject().put("state",state)
+                    .put("seed",Long.toUnsignedString(moon.seed,16))
+                    .put("latency",match==null?-1:match.getLatency());
+                snapshot.put(Long.toUnsignedString(moon.world,16),entry);
+            }
+            getSharedPreferences("status",0).edit().putString("moonConnectivity",snapshot.toString())
+                .putLong("moonCheckedAt",SystemClock.elapsedRealtime())
+                .putString("moons","已配置 Moon："+configured.size()+" · 路径正常："+online).apply();
         } catch(Exception e) {
-            getSharedPreferences("status",0).edit().putString("moons","Moon 状态暂不可用").apply();
+            getSharedPreferences("status",0).edit().remove("moonConnectivity").putLong("moonCheckedAt",0).putString("moons","Moon 状态暂不可用").apply();
         }
     }
     private File stateFile(String name) throws IOException {
@@ -216,7 +234,7 @@ public final class TunnelService extends VpnService {
                 network.bindSocket(replacement);
                 replacement.bind(new InetSocketAddress(0)); replacement.setSoTimeout(1000);
             } catch(Exception e) { replacement.close(); throw e; }
-            invalidateHealth(tun==null?"joining":"validating"); closeUdp(); udp=replacement; physical=network; setUnderlyingNetworks(new Network[]{network});
+            invalidateHealth(tun==null?"joining":"validating"); resetMoonConnectivity(); closeUdp(); udp=replacement; physical=network; setUnderlyingNetworks(new Network[]{network});
             wireNetwork=network.toString()+" / "+(caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)?"Wi-Fi":"其他网络")+" port="+replacement.getLocalPort();
             wireError="";
             if(bridge!=null) bridge.expire();
@@ -388,7 +406,7 @@ public final class TunnelService extends VpnService {
     private static String safe(Throwable e) { return e.getMessage()==null?e.getClass().getSimpleName():e.getMessage(); }
     private synchronized void shutdown(String reason) {
         if(stopping) return;
-        stopping=true; alive=false; closeUdp(); closeTun();
+        stopping=true; alive=false; resetMoonConnectivity(); closeUdp(); closeTun();
         if(connectivity!=null && networks!=null) { try { connectivity.unregisterNetworkCallback(networks); } catch(Exception ignored) {} }
         publish(reason,false);
         try { engine.execute(() -> { if(node!=null) { try { node.close(); } catch(Exception ignored) {} node=null; } }); }

@@ -32,3 +32,12 @@ No reboot endurance, battery soak, or universal site/protocol coverage is claime
 - Live camera-to-physical-QR decoding was not independently exercised; the shared camera-frame decoder and actual camera lifecycle were tested separately.
 
 - Final 0.5.0 build/lint and APK signature verification passed. On-device Moon settings showed one compact summary; its manager displayed one short ID without World/Seed duplication. Adding the existing ID kept one entry. Original saved connection settings were retained.
+
+## 0.5.1 Moon connectivity
+
+- Added per-configured-Seed path status and measured latency outside developer mode. Discovery and cached latency alone never count as live connectivity.
+- Freshness requires a receive timestamp from the current physical-network observation period and within 120 seconds; unknown/zero latency is not displayed as 0 ms.
+- Service snapshots refresh every five seconds and the UI expires them after fifteen seconds. Network changes, service startup/loss/shutdown invalidate snapshots.
+- Pure-Java tests cover discovery, non-Moon peers, absent/stale replies, valid replies, physical-network invalidation and clock boundaries.
+
+- Build/lint, core tests and APK signature verification passed. Installed 0.5.1 on the physical phone without clearing settings. In user mode, the configured Moon showed a live path and a measured 15 ms latency; the summary showed one reachable node. VPN NAS/Internet health also returned connected.

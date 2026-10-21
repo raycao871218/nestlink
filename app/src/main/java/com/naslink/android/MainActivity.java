@@ -23,6 +23,10 @@ public final class MainActivity extends Activity {
     private EditText editNetwork,editGateway,editPort,editMoons;
     private AlertDialog settingsDialog;
     private Button moonSummary;
+    private AlertDialog moonDialog;
+    private LinearLayout moonRows;
+    private java.util.ArrayList<MoonSettings.Moon> visibleMoons;
+    private String moonUiStamp="";
     private final Runnable refresh=new Runnable() { public void run() { render(); handler.postDelayed(this,1000); } };
     private SharedPreferences settings() { return getSharedPreferences("connection",0); }
     private SharedPreferences status() { return getSharedPreferences("status",0); }
@@ -78,6 +82,7 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onDestroy() { handler.removeCallbacksAndMessages(null); super.onDestroy(); }
     private void render() {
+        refreshMoonConnectivity();
         boolean active=TunnelService.alive;
         SharedPreferences s=status(); String phase=active?s.getString("phase","joining"):"disconnected";
         boolean ok=active && phase.equals("connected");
@@ -107,7 +112,7 @@ public final class MainActivity extends Activity {
         device.setVisibility(active && (phase.equals("authorization")||phase.equals("joining")) && !node.isEmpty()?View.VISIBLE:View.GONE);
         device.setText("设备 ID："+node+"  ·  供管理端授权");
         boolean dev=settings().getBoolean("developer",false); developerPanel.setVisibility(dev?View.VISIBLE:View.GONE);
-        mode.setText(dev?"开发者模式 · HarborLink 0.5.0":"归港 · 私有连接，自在访问");
+        mode.setText(dev?"开发者模式 · HarborLink 0.5.1":"归港 · 私有连接，自在访问");
         if(dev) diagnostics.setText("状态："+s.getString("message","")+"\n设备："+node+"\n地址："+s.getString("address","")+"\n"+s.getString("healthLog","")+"\n"+s.getString("moons","")+"\n"+s.getString("diagnostics",""));
         else diagnostics.setText("");
     }
@@ -204,7 +209,7 @@ public final class MainActivity extends Activity {
         developer.setOnCheckedChangeListener((v,checked) -> { settings().edit().putBoolean("developer",checked).apply(); if(!checked) status().edit().remove("diagnostics").apply(); render(); });
         String id=status().getString("node","");
         if(!id.isEmpty()) { TextView identity=text("设备 ID："+id,12,muted); identity.setTextIsSelectable(true); add(body,identity,18); }
-        add(body,text("HarborLink · 归港  0.5.0\n一个 VPN，连接内网与 NAS 代理出口。",12,muted),18);
+        add(body,text("HarborLink · 归港  0.5.1\n一个 VPN，连接内网与 NAS 代理出口。",12,muted),18);
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle("连接设置").setView(scroll).setPositiveButton("保存",null).setNegativeButton("关闭",null).create();
         settingsDialog=dialog;
         dialog.setOnShowListener(v -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(button -> {
@@ -218,10 +223,47 @@ public final class MainActivity extends Activity {
             } catch(Exception e) { Toast.makeText(this,e.getMessage(),Toast.LENGTH_LONG).show(); }
         })); dialog.show();
     }
+    private boolean moonSnapshotFresh() {
+        long checked=status().getLong("moonCheckedAt",0),age=SystemClock.elapsedRealtime()-checked;
+        return TunnelService.alive && checked>0 && age>=0 && age<=15000;
+    }
+    private org.json.JSONObject moonInfo(MoonSettings.Moon moon) {
+        if(!moonSnapshotFresh()) return null;
+        try {
+            org.json.JSONObject info=new org.json.JSONObject(status().getString("moonConnectivity","{}")).optJSONObject(Long.toUnsignedString(moon.world,16));
+            return info!=null && Long.toUnsignedString(moon.seed,16).equals(info.optString("seed"))?info:null;
+        } catch(org.json.JSONException e) {return null;}
+    }
     private void updateMoonSummary() {
         if(moonSummary==null||editMoons==null) return;
-        try {int count=MoonSettings.parse(editMoons.getText().toString()).size();moonSummary.setText("Moon 节点   ·   "+(count==0?"未配置":count+" 个已配置")+"   ›");}
-        catch(IllegalArgumentException e) {moonSummary.setText("Moon 节点   ·   待检查   ›");}
+        try {
+            java.util.List<MoonSettings.Moon> nodes=MoonSettings.parse(editMoons.getText().toString());int online=0;
+            for(MoonSettings.Moon moon:nodes) {org.json.JSONObject info=moonInfo(moon);if(info!=null && "online".equals(info.optString("state"))) online++;}
+            String summary=nodes.isEmpty()?"未配置":nodes.size()+" 个";
+            if(!nodes.isEmpty()&&moonSnapshotFresh()) summary+=" · "+online+" 可达";
+            moonSummary.setText("Moon 节点 · "+summary+"  ›");
+        } catch(IllegalArgumentException e) {moonSummary.setText("Moon 节点   ·   待检查   ›");}
+    }
+    private void refreshMoonConnectivity() {
+        updateMoonSummary();
+        if(moonDialog==null||!moonDialog.isShowing()||moonRows==null||visibleMoons==null) return;
+        String stamp=TunnelService.alive+"/"+moonSnapshotFresh()+"/"+status().getString("moonConnectivity","")+"/"+settings().getBoolean("developer",false);
+        if(!stamp.equals(moonUiStamp)) {moonUiStamp=stamp;renderMoonRows(moonRows,visibleMoons);}
+    }
+    private void addMoonConnectivity(LinearLayout info,MoonSettings.Moon moon) {
+        String label="未连接";int color=muted;
+        if(TunnelService.alive) {
+            org.json.JSONObject item=moonInfo(moon);
+            if(item==null) label="检测中…";
+            else switch(item.optString("state")) {
+                case "online": int delay=item.optInt("latency",-1);label="● 连接正常"+(delay>0?" · "+delay+" ms":" · 延迟待测");color=mint;break;
+                case "no_path": label="○ 暂无可用路径";color=amber;break;
+                case "unconfirmed": label="○ 尚未确认为 Moon";break;
+                case "waiting": label="○ 等待当前网络回包";break;
+                default: label="○ 尚未发现";
+            }
+        }
+        add(info,text(label,12,color),4);
     }
     private void manageMoons() {
         java.util.List<MoonSettings.Moon> existing;
@@ -229,7 +271,7 @@ public final class MainActivity extends Activity {
         catch(IllegalArgumentException e) {Toast.makeText(this,e.getMessage(),Toast.LENGTH_LONG).show();return;}
         final java.util.ArrayList<MoonSettings.Moon> nodes=new java.util.ArrayList<>(existing);
         ScrollView scroll=new ScrollView(this);LinearLayout body=column();body.setPadding(dp(22),dp(6),dp(22),dp(14));scroll.addView(body);
-        add(body,text("可选节点，用于辅助设备发现。",13,muted),0);
+        add(body,text("连接时自动更新节点路径与延迟。",13,muted),0);
         LinearLayout list=column();add(body,list,14);
         renderMoonRows(list,nodes);
         EditText addId=field(body,"添加节点","");addId.setHint("Moon ID");addId.setEnabled(!TunnelService.alive);
@@ -249,7 +291,10 @@ public final class MainActivity extends Activity {
             } catch(IllegalArgumentException e) {Toast.makeText(this,e.getMessage(),Toast.LENGTH_LONG).show();}
         });
         add(body,text(TunnelService.alive?"连接中仅可查看；修改前请先断开。":"添加或移除后，保存连接设置即可生效。",12,muted),12);
-        new AlertDialog.Builder(this).setTitle("Moon 节点").setView(scroll).setPositiveButton("完成",null).show();
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Moon 节点").setView(scroll).setPositiveButton("完成",null).create();
+        moonDialog=dialog;moonRows=list;visibleMoons=nodes;moonUiStamp="";
+        dialog.setOnDismissListener(v -> {if(moonDialog==dialog) {moonDialog=null;moonRows=null;visibleMoons=null;}});
+        dialog.show();refreshMoonConnectivity();
     }
     private void renderMoonRows(LinearLayout list,java.util.ArrayList<MoonSettings.Moon> nodes) {
         list.removeAllViews();
@@ -257,6 +302,7 @@ public final class MainActivity extends Activity {
         for(MoonSettings.Moon moon:new java.util.ArrayList<>(nodes)) {
             LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(0,dp(7),0,dp(7));
             LinearLayout info=column();TextView label=text(moon.displayId(),15,ink);label.setTypeface(Typeface.MONOSPACE);add(info,label,0);
+            addMoonConnectivity(info,moon);
             if(settings().getBoolean("developer",false)) add(info,text("World: "+Long.toUnsignedString(moon.world,16)+"\nSeed: "+String.format(java.util.Locale.ROOT,"%010x",moon.seed),11,muted),4);
             row.addView(info,new LinearLayout.LayoutParams(0,-2,1));Button remove=button("移除",paper,muted);remove.setTextSize(12);row.addView(remove,new LinearLayout.LayoutParams(dp(62),dp(42)));remove.setEnabled(!TunnelService.alive);
             remove.setOnClickListener(v -> {nodes.remove(moon);editMoons.setText(MoonSettings.format(nodes));renderMoonRows(list,nodes);});add(list,row,0);

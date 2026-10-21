@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import pathlib, subprocess, tempfile
 root=pathlib.Path(__file__).resolve().parents[1]
-classes=['EthernetBridge','ConnectionSettings','MoonSettings','BootstrapPolicy','ConnectionHealth','QrPayload']
+classes=['EthernetBridge','ConnectionSettings','MoonSettings','BootstrapPolicy','ConnectionHealth','QrPayload','MoonConnectivity']
 sources=[root/'app/src/main/java/com/naslink/android'/f'{name}.java' for name in classes]
 tests=sorted((root/'tests').glob('*Test.java'))
 with tempfile.TemporaryDirectory(prefix='harborlink-tests-') as output:
