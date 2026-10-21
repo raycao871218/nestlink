@@ -41,3 +41,10 @@ No reboot endurance, battery soak, or universal site/protocol coverage is claime
 - Pure-Java tests cover discovery, non-Moon peers, absent/stale replies, valid replies, physical-network invalidation and clock boundaries.
 
 - Build/lint, core tests and APK signature verification passed. Installed 0.5.1 on the physical phone without clearing settings. In user mode, the configured Moon showed a live path and a measured 15 ms latency; the summary showed one reachable node. VPN NAS/Internet health also returned connected.
+
+## 0.6.0 NestLink redesign and localization
+
+- Assemble and Android lint passed for the debug build. Core, QR decoder and English/Chinese translation checks passed.
+- Installed on the physical phone without clearing settings. English was the default on a Chinese-language Android system.
+- Switched to Chinese and back to English during an active VPN session. Both NAS and internet checks returned ready, and the Moon summary reported a reachable helper. No disconnect was triggered by language changes.
+- Captured both localized home screens after connectivity verification; public screenshots omit phone status bars and connection identifiers.

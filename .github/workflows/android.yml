@@ -18,6 +18,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Install Android native tools
         run: JAVA_HOME="$JAVA_HOME_21_X64" "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-34" "build-tools;34.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
+      - name: Translation checks
+        run: python3 tools/test_i18n.py
       - name: Core tests
         run: python3 tools/test_core.py
       - name: Build and lint

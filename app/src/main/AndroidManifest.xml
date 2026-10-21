@@ -8,7 +8,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <queries><package android:name="com.zerotier.one" /></queries>
-    <application android:label="HarborLink" android:icon="@drawable/ic_naslink" android:theme="@android:style/Theme.Material.NoActionBar" android:allowBackup="false" android:dataExtractionRules="@xml/data_extraction_rules" android:supportsRtl="true">
+    <application android:label="NestLink" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher" android:theme="@style/NestTheme" android:allowBackup="false" android:dataExtractionRules="@xml/data_extraction_rules" android:supportsRtl="true">
         <!-- Android explicitly permits consented VPN apps to use systemExempted.
              AGP 8.5 lint only models the exact-alarm alternative and misses VPN consent.
              https://developer.android.com/about/versions/14/changes/fgs-types-required -->

@@ -15,6 +15,7 @@ import java.util.concurrent.*;
 /** One VPN, one embedded ZeroTier node. All native calls run on a single engine thread. */
 public final class TunnelService extends VpnService {
     public static volatile boolean alive;
+    public static final String LOCALIZE="com.naslink.LOCALIZE";
     public static final String RECHECK="com.naslink.RECHECK";
     public static final String STOP="com.naslink.STOP";
     private final ScheduledThreadPoolExecutor engine=new ScheduledThreadPoolExecutor(1);
@@ -47,6 +48,7 @@ public final class TunnelService extends VpnService {
     @Override public int onStartCommand(Intent intent,int flags,int startId) {
         if(intent!=null && STOP.equals(intent.getAction())) { shutdown("已断开"); return START_NOT_STICKY; }
         if(intent!=null && RECHECK.equals(intent.getAction())) { submit(this::checkHealth); return START_NOT_STICKY; }
+        if(intent!=null && LOCALIZE.equals(intent.getAction())) {if(starting) getSystemService(NotificationManager.class).notify(7,notification(""));else stopSelf();return START_NOT_STICKY;}
         if(starting) return START_NOT_STICKY;
         starting=true;
         alive=true;
@@ -61,7 +63,7 @@ public final class TunnelService extends VpnService {
             gateway=p.getString("gateway","");
             ConnectionSettings.ipv4(gateway);
             NotificationManager nm=getSystemService(NotificationManager.class);
-            nm.createNotificationChannel(new NotificationChannel("tunnel","HarborLink 连接",NotificationManager.IMPORTANCE_LOW));
+            nm.createNotificationChannel(new NotificationChannel("tunnel",AppLanguage.wrap(this).getString(R.string.notice_channel),NotificationManager.IMPORTANCE_LOW));
             if(Build.VERSION.SDK_INT>=34) startForeground(7,notification("正在启动 ZeroTier"),ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED);
             else startForeground(7,notification("正在启动 ZeroTier"));
             publish("正在启动 ZeroTier",true);
@@ -280,7 +282,7 @@ public final class TunnelService extends VpnService {
             int prefix=address.getPort(), mask=prefix==0?0:-1 << (32-prefix);
             if(prefix<1 || prefix>30 || (local&mask)!=(via&mask) || local==via) throw new IOException("NAS 网关必须在分配的 IPv4 子网内，且不能等于本机地址");
             closeTun();
-            Builder builder=new Builder().setSession("HarborLink · 内网与代理").setMtu(Math.min(1400,config.getMtu())).setBlocking(true)
+            Builder builder=new Builder().setSession(AppLanguage.wrap(this).getString(R.string.vpn_session)).setMtu(Math.min(1400,config.getMtu())).setBlocking(true)
                 .addAddress(address.getAddress(),prefix).addRoute("0.0.0.0",0).addDnsServer(gateway);
             // IPv6 is deliberately not enabled: Android blocks this family rather than leaking it outside the VPN.
             if(Build.VERSION.SDK_INT>=29) builder.setMetered(true);
@@ -334,9 +336,9 @@ public final class TunnelService extends VpnService {
     private Notification notification(String message) {
         PendingIntent open=PendingIntent.getActivity(this,0,new Intent(this,MainActivity.class),PendingIntent.FLAG_IMMUTABLE);
         PendingIntent stop=PendingIntent.getService(this,1,new Intent(this,TunnelService.class).setAction(STOP),PendingIntent.FLAG_IMMUTABLE);
-        return new Notification.Builder(this,"tunnel").setContentTitle("HarborLink").setContentText(message)
+        return new Notification.Builder(this,"tunnel").setContentTitle(AppLanguage.wrap(this).getString(R.string.app_name)).setContentText(AppLanguage.notification(this,getSharedPreferences("status",0).getString("phase","joining")))
             .setSmallIcon(android.R.drawable.stat_sys_upload_done).setOngoing(true).setContentIntent(open)
-            .addAction(new Notification.Action.Builder(null,"断开",stop).build()).build();
+            .addAction(new Notification.Action.Builder(null,AppLanguage.wrap(this).getString(R.string.notice_stop),stop).build()).build();
     }
     private void publish(String message,boolean active) {
         getSharedPreferences("status",0).edit().putString("message",message).putBoolean("active",active).putString("address",currentAddress).apply();

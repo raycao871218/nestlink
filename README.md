@@ -1,91 +1,79 @@
-# HarborLink · 归港
+**English** | [简体中文](README.zh-CN.md)
 
-**一个连接，回到家中的网络。**
+# NestLink · 窝窝连
 
-HarborLink 是一个 Android 客户端：内置 ZeroTier 隧道，通过家中 NAS 上的 mihomo 网关，同时访问家庭内网和互联网。只占用一个 Android VPN，无需同时运行官方 ZeroTier 客户端。
+**One little tap. A little closer to home.**
 
-<img src="docs/connected.png" alt="HarborLink 用户模式连接界面" width="320" />
+NestLink is a cozy Android app that brings your home network along with you. It embeds ZeroTier and connects through your NAS gateway, so you can reach your home devices and the internet using a single Android VPN.
 
-## 日常使用
+<img src="branding/nestlink-icon.png" alt="NestLink’s smiling little-house mascot" width="112" />
 
-- **一个按钮**：连接、取消、断开，界面跟随真实状态变化。
-- **自动验收连接**：获得虚拟地址后，在 VPN 网络内检查 NAS TCP 端口，再执行经过系统证书验证的 HTTPS 请求。两项通过才显示“已连接”。
-- **持续检查**：后台服务每 20 秒发起检测。失败显示“连接待恢复”；网络切换会清除旧结果，重新验证。检测耗时另计。
-- **默认用户模式**：仅显示连接状态、家庭网络与互联网可用性。设置中开启开发者模式后，才显示节点、路径、错误与诊断工具。
-- **扫码入网**：相机或本地图片识别二维码，确认后填入设置；也可显示当前网络的入网码供其他设备扫描。
-- **Moon 支持**：设置页只显示配置数量，点击后管理简短节点列表；完整 World / Seed 仅在开发者模式显示。支持最多 8 个节点，连接时自动加载。
+## A softer way home
 
-## Moon 连通性
+A warm cream canvas, peach buttons, sage accents and a smiling little house. The everyday screen stays simple: one connection button, a clear status and two small connectivity checks.
 
-Moon 列表会自动显示节点状态与最近测得的延迟。绿色“连接正常”要求引擎将配置的 Seed 节点识别为 Moon，且当前底层网络下有最近 120 秒内的真实回包。仅有节点记录、旧延迟或已提交 orbit 不会显示正常。
+- **English by default**, even on a device using another language. Switch to **简体中文** at the top of Settings; your choice is remembered without restarting the VPN.
+- **Honest connection status.** “Home sweet home!” appears only after the NAS TCP check and certificate-verified HTTPS check both pass through the VPN.
+- **Offline QR setup.** Scan with the camera or choose a photo, review the detected settings, then save. Display your own connection QR code for another device.
+- **Live Moon status.** Compact helper lists show recent path availability and measured latency. Discovery alone is never shown as connectivity.
+- **Developer tools stay tucked away.** Logs and peer details appear only after Developer mode is enabled.
 
-- **尚未发现**：暂未找到配置的 Seed peer。
-- **尚未确认为 Moon**：发现该节点，但引擎尚未认定其为 Moon。
-- **等待当前网络回包**：切换网络后还没有收到新回包。
-- **暂无可用路径**：未收到回包，或回包已超过新鲜度窗口。
-- **未连接 / 检测中**：VPN 未启动，或状态快照尚未就绪。
+<img src="docs/nestlink-en.png" alt="NestLink connected home screen in English" width="320" />
 
-服务每 5 秒更新一次，界面自动刷新；快照超过 15 秒会停止显示旧的绿色状态。检测对象是配置中的 Seed 节点，而非整个 Moon World 的所有成员。Moon 连通性与 NAS 代理出口可用性分别显示。
+## Get comfortable
 
-## 扫码入网
+1. Use Android 8.0 or newer. In Settings, scan a network QR code or enter your ZeroTier network ID and the NAS gateway’s ZeroTier IPv4 address.
+2. Join the same ZeroTier network on your NAS and configure its mihomo gateway. See the [NAS reference](nas/README.md).
+3. Tap **Let’s go home** and approve Android’s VPN request. A new device still needs approval in your ZeroTier controller.
+4. NestLink checks the connection automatically and shows the result. You do not need the official ZeroTier client running alongside it.
 
-在“设置”中点击“扫码入网”。支持相机实时扫描和“从图片识别”；识别在设备本地完成，不上传图片、不依赖 Google Play Services。只在进入扫描时请求相机权限；拒绝权限仍能选择图片。
+The network ID alone cannot discover your NAS gateway. QR codes containing just a network ID preserve the gateway settings already entered on the phone.
 
-支持的内容：
-
-- 16 位 ZeroTier 网络 ID。
-- `zerotier://<network-id>` 或 `zerotier://network/<network-id>`。
-- `https://my.zerotier.com/network/<network-id>` 和 `https://central.zerotier.com/networks/<network-id>`，仅解析 ID，不打开网页。
-- `harborlink://join?network=<id>&gateway=<ipv4>&port=7890&moons=<URL编码的Moon列表>`。
-
-识别后会显示网络 ID 与可选的 NAS / Moon 参数。点击“填入设置”，再保存和连接。只有网络 ID 的二维码会保留现有 NAS 参数；二维码不替代 Controller 设备授权，也不自动改变 NAS 或网络成员权限。网络 ID 本身不足以自动发现 NAS 出口，新用户仍需填写 NAS 网关。
-
-“显示入网码”会用当前填写的连接参数生成二维码，供另一台设备扫描；不包含设备身份、密码、订阅或管理 API Token。
-
-## 工作方式
+## How the connection works
 
 ```text
-手机 App → Android VPN → 嵌入式 ZeroTier → NAS
-                                            ├─ 家庭内网：局域网路由 + NAT
-                                            └─ 互联网：mihomo TUN + 分流规则
+Android apps → NestLink VPN → embedded ZeroTier → your NAS
+                                                   ├─ home LAN: routing + NAT
+                                                   └─ internet: mihomo TUN + rules
 ```
 
-状态检查绑定本 App 的 VPN 网络，HTTPS 使用 `Proxy.NO_PROXY`，不回退到显式 HTTP 代理或手机物理网络。NAS 检测证明指定 TCP 服务可达，不代表所有内网设备都可用；HTTPS 204 证明测试站点当时可达，不代表所有网站和协议都可用。
+Checks bind to the app’s VPN network, with no explicit-proxy or physical-network fallback. The NAS check verifies its configured TCP service; HTTPS 204 verifies the selected test site at that moment, rather than every possible site or protocol.
 
-## 开始使用
+Moon helper status uses actual ZeroTier receive timestamps for the configured Seed node. It requires a confirmed Moon role and a reply within 120 seconds from the current physical network. Snapshots refresh every five seconds and expire after fifteen seconds. This is separate from the NAS internet check.
 
-1. Android 8.0+。安装构建产物，在“设置”填写自己的 ZeroTier 网络 ID、NAS 的 ZeroTier IPv4 地址和代理端口；Moon 可选。
-2. NAS 加入同一 ZeroTier 网络，并配置 mihomo 透明代理出口。参考 [NAS 配置](nas/README.md)。
-3. 点击“连接回家”，授予 Android VPN 权限；首次连接在自己的 Controller 中授权设备 ID。
-4. 等待 App 自动验证，全部通过后显示“已连接”。之后无需手动点击检测。
+## QR formats
 
-公开源码不带个人网络 ID、NAS 登录凭据、订阅或设备身份。升级安装保留已有连接设置与身份。卸载或清除数据会生成新身份，需要重新授权。
+- A plain, non-zero, 16-character ZeroTier network ID.
+- `zerotier://<id>` or `zerotier://network/<id>`.
+- Supported `my.zerotier.com/network/<id>` and `central.zerotier.com/networks/<id>` HTTPS links, parsed locally without opening the page.
+- The existing `harborlink://join?network=<id>&gateway=<ipv4>&port=7890&moons=<encoded-list>` format remains compatible with earlier versions.
 
-## 构建
+Camera frames and selected photos are decoded on-device using ZXing. No photo uploads, external scanner or Google Play Services are required. QR codes carry connection settings, never NAS passwords, subscriptions, controller API tokens or device identities.
 
-JDK 17、Gradle 8.8、Android SDK 34 / Build Tools 34.0.0、NDK 27.2.12479018、CMake 3.22.1。
+## Build
+
+JDK 17, Gradle 8.8, Android SDK 34 / Build Tools 34.0.0, NDK 27.2.12479018 and CMake 3.22.1.
 
 ```sh
-# 配置 ANDROID_HOME，或在 local.properties 填写 sdk.dir
 ./gradlew :app:assembleDebug :app:lintDebug
 python3 tools/test_core.py
 python3 tools/test_qr.py
+python3 tools/test_i18n.py
 ```
 
-Windows CMake/Ninja 需要本地盘或映射盘路径，不支持直接在 UNC 目录链接。
-输出：`app/build/outputs/apk/debug/app-debug.apk`。调试 APK 适合体验；正式分发请自行管理签名密钥。
+Set `ANDROID_HOME` or put `sdk.dir` in your local `local.properties`. Windows native builds need a local or mapped drive rather than a UNC working directory. The debug APK is `app/build/outputs/apk/debug/app-debug.apk`; manage your own signing key for production distribution.
 
-## 验证与边界
+## A few boundaries
 
-- 原生引擎从上游 ZeroTier One 1.16.0 源码编译，包含 arm64-v8a、armeabi-v7a、x86_64。
-- 核心测试覆盖 IPv4 / ARP 桥接、Moon 参数、根节点迁移、健康状态与过期检测结果。
-- 真机验证过内网访问及 VPN 上的 HTTPS 204。新版本的验收见 [验证记录](docs/VALIDATION.md)。
-- 当前只支持一个网络、同子网 IPv4 NAS 网关；IPv6 在 VPN 内阻断，外层 IPv6 端点也暂不支持。
-- 未实现始终开启、开机自动连接和系统级断线阻断。VPN 关闭时，Android 恢复原网络。
-- Moon 帮助节点发现，不代替 Controller 授权，也不自动成为代理出口。
-- 内置签名公共 Planet 定义用于引导；只迁移一份已确认的旧定义，不覆盖其他自定义定义。见 `BootstrapPolicy`。
-- 与 ZeroTier Inc. 无隶属关系。
+- One network and one same-subnet IPv4 NAS gateway are supported. IPv6 is blocked inside the VPN; IPv6-only physical networks are not supported yet.
+- Always-on VPN, automatic startup and system-level lockdown are not implemented. Android restores the original network when the VPN closes.
+- Moon helpers do not replace controller approval or become the internet gateway.
+- Upgrading retains the app ID, connection settings and ZeroTier identity. Clearing data or uninstalling creates a new identity that needs approval again.
+- Android system permission dialogs use the system’s language; NestLink’s own interface and connection notification use the selected app language.
+- Not affiliated with ZeroTier Inc. The repository URL is retained from the earlier HarborLink name so existing links keep working.
 
-## 开源许可
+See [validation notes](docs/VALIDATION.md), [third-party notices](THIRD_PARTY.md), and the [icon prompt/provenance](branding/PROMPT.md).
 
-HarborLink 应用代码采用 **GPL-3.0-or-later**。第三方源码及其声明保留在 `vendor/`，详见 [THIRD_PARTY.md](THIRD_PARTY.md)。不会编译上游非自由 Controller。
+## License
+
+NestLink application code is **GPL-3.0-or-later**. Vendored sources retain their original licenses. The nonfree ZeroTier controller is not built.
