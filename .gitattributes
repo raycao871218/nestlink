@@ -1,0 +1,6 @@
+* text=auto eol=lf
+vendor/** -text
+*.png -text
+*.jar -text
+app/src/main/assets/bootstrap/planet -text
+*.bat text eol=crlf

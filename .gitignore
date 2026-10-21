@@ -1,0 +1,13 @@
+.gradle/
+**/build/
+**/.cxx/
+**/__pycache__/
+local.properties
+*.jks
+*.keystore
+*.apk
+*.aab
+.env
+nas/naslink.env
+identity.secret
+identity.public

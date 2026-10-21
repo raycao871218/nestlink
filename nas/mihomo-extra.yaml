@@ -1,0 +1,24 @@
+# Append only if the current configuration has no existing tun/dns sections.
+tun:
+  enable: true
+  device: naslink0
+  stack: gvisor
+  auto-route: false
+  auto-redirect: false
+  auto-detect-interface: true
+  dns-hijack:
+    - any:53
+    - tcp://any:53
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  ipv6: false
+  enhanced-mode: redir-host
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  nameserver:
+    - https://dns.alidns.com/dns-query
+    - https://1.1.1.1/dns-query
+  proxy-server-nameserver:
+    - https://dns.alidns.com/dns-query
