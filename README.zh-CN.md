@@ -69,6 +69,8 @@ Moon 列表会自动显示节点状态与最近测得的延迟。绿色“连接
 
 ## 构建
 
+iPad 原型位于 [`ios/`](ios/README.zh-CN.md)，使用 SwiftUI + Packet Tunnel 扩展；构建、签名和真机验收方法见该目录说明。Android 构建流程如下。
+
 JDK 17、Gradle 8.8、Android SDK 34 / Build Tools 34.0.0、NDK 27.2.12479018、CMake 3.22.1。
 
 ```sh

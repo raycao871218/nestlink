@@ -1,0 +1,2 @@
+// Keep machine-specific signing out of the repository.
+#include? "Signing.local.xcconfig"

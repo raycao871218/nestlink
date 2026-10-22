@@ -9,6 +9,8 @@ code is supplied under GPL-3.0-or-later in LICENSE. This source package accompan
 the debug APK.
 
 The application CMakeLists builds node/*.cpp, osdep/OSUtils.cpp, and java/jni/*.cpp.
+The iPad Xcode target builds node/*.cpp and osdep/OSUtils.cpp with a new
+Objective-C++ adapter; it does not compile or link the Java/JNI wrapper.
 It does not build the nonfree controller or desktop service. Referenced Prometheus
 and OpenTelemetry headers retain their notices under vendor/ZeroTierOne/ext.
 
@@ -20,6 +22,9 @@ Gradle wrapper tooling retains its embedded Apache-2.0 notices.
 
 The nlohmann/json header dependency is retained under its MIT license in vendor/ZeroTierOne/ext/nlohmann/LICENSE.MIT.
 
-QR scanning and generation use ZXing core 3.5.3 (Apache-2.0), resolved from Maven Central as com.google.zxing:core:3.5.3. Upstream source and license: https://github.com/zxing/zxing/tree/zxing-3.5.3 and https://github.com/zxing/zxing/blob/zxing-3.5.3/LICENSE . No external scanner or Play Services component is used.
+Android QR scanning and generation use ZXing core 3.5.3 (Apache-2.0), resolved from Maven Central as com.google.zxing:core:3.5.3. Upstream source and license: https://github.com/zxing/zxing/tree/zxing-3.5.3 and https://github.com/zxing/zxing/blob/zxing-3.5.3/LICENSE . No external scanner or Play Services component is used.
+
+The iPad QR implementation uses Apple's system AVFoundation, PhotosUI, Vision,
+ImageIO, and CoreImage frameworks. It does not bundle ZXing or upload images.
 
 The complete ZXing Apache-2.0 license is bundled in app/src/main/assets/licenses/ZXing-LICENSE.txt and included in the APK.

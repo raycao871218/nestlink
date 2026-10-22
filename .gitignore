@@ -11,3 +11,7 @@ local.properties
 nas/naslink.env
 identity.secret
 identity.public
+ios/NestLink.xcodeproj/
+ios/build-simulator/
+ios/Signing.local.xcconfig
+**/xcuserdata/

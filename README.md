@@ -4,6 +4,8 @@
 
 **One little tap. A little closer to home.**
 
+An initial iPad client is available in [`ios/`](ios/README.zh-CN.md): SwiftUI, a Packet Tunnel extension, and the existing ZeroTier C++ core. See the [validation record](ios/VALIDATION.md) for build, device installation, and pending connectivity checks.
+
 NestLink is a cozy Android app that brings your home network along with you. It embeds ZeroTier and connects through your NAS gateway, so you can reach your home devices and the internet using a single Android VPN.
 
 <img src="branding/nestlink-icon.png" alt="NestLink’s smiling little-house mascot" width="112" />
