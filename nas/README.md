@@ -8,7 +8,7 @@ Reuse your existing mihomo instance. This reference assumes Linux, Docker host n
 4. Copy `naslink.env.example` to `/volume1/docker/mihomo/naslink.env`; replace every example with your actual NAS/ZeroTier/LAN values. Keep it root-owned and non-writable by others. The NAS ZeroTier address must share the phone's assigned IPv4 subnet.
 5. Inspect policy table 2022 and priority 12500 first (`ip rule`; `ip route show table 2022`). They must be unused. The supplied script owns these identifiers.
 6. Copy `naslink-routing.sh` to `/volume1/docker/mihomo/`, then run as root: `sh /volume1/docker/mihomo/naslink-routing.sh start`.
-7. Connect HarborLink and wait for both health checks. Test a separate LAN device too; that validates forwarding/NAT rather than just NAS reachability.
+7. Connect NestLink and wait for both health checks. Test a separate LAN device too; that validates forwarding/NAT rather than just NAS reachability.
 
 The script scopes policy routing to traffic entering the ZeroTier interface, routes the LAN subnet with source NAT, redirects clients' NAS DNS requests to port 1053, and routes other destinations into `naslink0`. A lower-priority blackhole prevents that policy table from falling through to the normal default when TUN disappears. It leaves the NAS default gateway intact. Every member able to route through this ZeroTier interface may use the gateway; use Controller authorization and network rules to restrict membership.
 

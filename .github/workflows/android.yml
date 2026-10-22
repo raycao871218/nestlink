@@ -28,5 +28,5 @@ jobs:
         run: python3 tools/test_qr.py
       - uses: actions/upload-artifact@v4
         with:
-          name: HarborLink-debug
+          name: NestLink-Android-debug
           path: app/build/outputs/apk/debug/app-debug.apk

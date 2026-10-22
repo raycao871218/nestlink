@@ -4,7 +4,7 @@ This application embeds the ZeroTier One core and Java JNI SDK from upstream tag
 1.16.0: https://github.com/zerotier/ZeroTierOne/tree/1.16.0
 
 Source and notices are retained in vendor/ZeroTierOne. Core files carry MPL-2.0
-notices; the Java/JNI wrapper carries GPLv3 notices. HarborLink original application
+notices; the Java/JNI wrapper carries GPLv3 notices. NestLink original application
 code is supplied under GPL-3.0-or-later in LICENSE. This source package accompanies
 the debug APK.
 

@@ -4,7 +4,9 @@
 
 **一个连接，回到家中的网络。**
 
-NestLink 是一个 Android 客户端：内置 ZeroTier 隧道，通过家中 NAS 上的 mihomo 网关，同时访问家庭内网和互联网。只占用一个 Android VPN，无需同时运行官方 ZeroTier 客户端。
+NestLink 提供 Android 客户端与 iPad 开发原型：内置 ZeroTier 隧道，通过家中 NAS 上的 mihomo 网关，访问家庭内网和互联网。每台设备只占用一个 VPN，无需同时运行官方 ZeroTier 客户端。
+
+Android 代码位于 `app/`，iPad 代码位于 [`ios/`](ios/README.zh-CN.md)。iPad 的实测进度见[验证记录](ios/VALIDATION.md)，实际联网与部分真机交互仍待验收。以下使用与构建说明以 Android 为主。
 
 <img src="docs/nestlink-zh.png" alt="NestLink 用户模式连接界面" width="320" />
 

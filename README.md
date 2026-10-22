@@ -4,9 +4,9 @@
 
 **One little tap. A little closer to home.**
 
-An initial iPad client is available in [`ios/`](ios/README.zh-CN.md): SwiftUI, a Packet Tunnel extension, and the existing ZeroTier C++ core. See the [validation record](ios/VALIDATION.md) for build, device installation, and pending connectivity checks.
+NestLink brings your home network along with you on Android and iPad. It embeds ZeroTier and connects through your NAS gateway, so you can reach home devices and the internet using one VPN on each device.
 
-NestLink is a cozy Android app that brings your home network along with you. It embeds ZeroTier and connects through your NAS gateway, so you can reach your home devices and the internet using a single Android VPN.
+The Android client is in `app/`; the iPad development prototype is in [`ios/`](ios/README.zh-CN.md). See the iPad [validation record](ios/VALIDATION.md) for build, device installation, and pending connectivity checks. The Android usage and build instructions follow below.
 
 <img src="branding/nestlink-icon.png" alt="NestLink’s smiling little-house mascot" width="112" />
 
@@ -72,7 +72,7 @@ Set `ANDROID_HOME` or put `sdk.dir` in your local `local.properties`. Windows na
 - Moon helpers do not replace controller approval or become the internet gateway.
 - Upgrading retains the app ID, connection settings and ZeroTier identity. Clearing data or uninstalling creates a new identity that needs approval again.
 - Android system permission dialogs use the system’s language; NestLink’s own interface and connection notification use the selected app language.
-- Not affiliated with ZeroTier Inc. The repository URL is retained from the earlier HarborLink name so existing links keep working.
+- Not affiliated with ZeroTier Inc. The project repository is [raycao871218/nestlink](https://github.com/raycao871218/nestlink).
 
 See [validation notes](docs/VALIDATION.md), [third-party notices](THIRD_PARTY.md), and the [icon prompt/provenance](branding/PROMPT.md).
 
