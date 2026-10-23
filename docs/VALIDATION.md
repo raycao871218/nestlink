@@ -48,3 +48,12 @@ No reboot endurance, battery soak, or universal site/protocol coverage is claime
 - Installed on the physical phone without clearing settings. English was the default on a Chinese-language Android system.
 - Switched to Chinese and back to English during an active VPN session. Both NAS and internet checks returned ready, and the Moon summary reported a reachable helper. No disconnect was triggered by language changes.
 - Captured both localized home screens after connectivity verification; public screenshots omit phone status bars and connection identifiers.
+
+## 0.7.0 yellow-chicken UI — 2026-10-23
+
+- Implemented the approved warm hand-drawn direction: chicken launcher/header artwork, larger brand/title, licensed ZCOOL KuaiLe text, inked surfaces and utility glyphs, yellow power action, circular connectivity indicators and compact settings.
+- Added collapsible setup/troubleshooting guidance, controller authorization instructions and device-ID copying. Authorization or degraded connectivity reveals the relevant guidance.
+- Android versionCode 10, versionName 0.7.0. All native ABIs build; assembleDebug and lintDebug passed, as did pure-Java core, QR decoder and translation checks.
+- Covered the existing PHP110 installation using adb install -r and confirmed version 0.7.0. Existing network and Moon configuration remained present; no data clearing or automatic VPN start was performed.
+- Inspected the enlarged 72dp chicken header, 34sp brand, 42sp heading, centered power action and compact handwritten settings on PHP110. No clipping was observed at its current font size; the guide remains collapsed until opened or attention is needed.
+- This UI release does not claim a new VPN connectivity, battery, reboot or large-font endurance test.

@@ -1,4 +1,4 @@
-// Package the existing NestLink artwork as an opaque iOS app icon.
+// Package the current hand-drawn NestLink mark as an opaque iOS app icon.
 import Foundation
 import CoreGraphics
 import ImageIO

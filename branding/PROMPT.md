@@ -1,7 +1,7 @@
 # NestLink icon provenance
 
-Generated with the built-in image_gen tool (not the CLI fallback), 2026-10-21. The original RGBA artwork is `nestlink-icon.png`. Android resources are mechanical size derivatives preserving its transparency, with a separate cream adaptive-icon background.
+The current `nestlink-icon.png` is the approved yellow-feathered chicken mascot, generated using the built-in image_gen tool on 2026-10-22. It is an opaque square image. The exact prompt is retained in [icon-yellow-chicken-candidate.md](icon-yellow-chicken-candidate.md).
 
-## Final prompt
+Android launcher densities, the adaptive foreground, header thumbnail and iOS AppIcon are mechanical size derivatives. Generate them with `python tools/generate_app_icons.py`. Android notifications use a separate monochrome chicken silhouette.
 
-Use case: logo-brand. Asset type: polished Android launcher foreground and in-app mascot for NestLink, a cute friendly app for connecting back to your home network. Generate ONE original icon, isolated on a truly transparent background. A plump tiny cozy house character, rounded creamy ivory walls, soft peach-pink pillowy roof, a small sage-mint arched door, two tiny dark cocoa eyes and a gentle smile with blush cheeks. A little mint leaf sprouts from the chimney. Tactile matte clay / soft toy illustration, restrained soft shading, simple iconic silhouette, warm cozy welcoming personality, high visual quality and crisp edges at small sizes. Straight-on view, centered square 1024x1024 composition, the whole character fits in the central 65 percent with generous transparent padding for Android adaptive icon masks. No text, letters, wireless symbols, badges, surrounding scenery, outer tile, outline border or watermark.
+The warm hand-drawn UI concept and exact image-generation prompt are in [the design folder](../design/yellow-chicken-ui-concept.md). Runtime controls remain native code, not images of screens.

@@ -13,14 +13,18 @@ import android.widget.*;
 /** Everyday controls stay separate from opt-in diagnostics. Health is owned by the service. */
 public final class MainActivity extends Activity {
     private final Handler handler=new Handler(Looper.getMainLooper());
-    private final int paper=Color.rgb(255,248,240), card=Color.WHITE, ink=Color.rgb(76,60,55);
-    private final int muted=Color.rgb(128,108,98), mint=Color.rgb(66,109,89), amber=Color.rgb(150,97,34);
-    private final int peach=Color.rgb(242,183,167);
+    private final int paper=Color.rgb(255,251,237), card=Color.rgb(255,253,244), ink=Color.rgb(76,39,24);
+    private final int muted=Color.rgb(126,107,85), mint=Color.rgb(89,106,48), amber=Color.rgb(150,97,34);
+    private final int peach=Color.rgb(255,211,76);
+    private Typeface inkTypeface;
     private boolean restoreLanguageSettings;
     private TextView title,subtitle,lan,internet,profile,device,diagnostics,mode;
     private LinearLayout developerPanel;
     private Button action;
-    private NestView mascot;
+    private TextView guidance;
+    private Button guideToggle;
+    private boolean guideExpanded;
+    private Button configureGuide,copyDevice;
     private Bundle draftSettings;
     private EditText editNetwork,editGateway,editPort,editMoons;
     private AlertDialog settingsDialog;
@@ -35,7 +39,8 @@ public final class MainActivity extends Activity {
     @Override protected void attachBaseContext(Context base) {super.attachBaseContext(AppLanguage.wrap(base));}
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
-        if(saved!=null) draftSettings=saved.getBundle("draftSettings");
+        inkTypeface=getResources().getFont(R.font.zcool_kuaile);
+        if(saved!=null) {draftSettings=saved.getBundle("draftSettings");guideExpanded=saved.getBoolean("guideExpanded",false);}
         getWindow().setStatusBarColor(paper); getWindow().setNavigationBarColor(Build.VERSION.SDK_INT>=27?paper:ink);
         // Preserve an earlier install's explicitly configured proxy port.
         if(!settings().contains("port")) {
@@ -44,26 +49,54 @@ public final class MainActivity extends Activity {
             settings().edit().putInt("port",port).apply();
         }
         ScrollView scroll=new ScrollView(this); scroll.setFillViewport(true); scroll.setBackgroundColor(paper);
-        LinearLayout root=column(); root.setPadding(dp(24),dp(18),dp(24),dp(28)); scroll.addView(root);
+        LinearLayout root=column(); root.setPadding(dp(20),dp(14),dp(20),dp(24)); scroll.addView(root);
         LinearLayout header=new LinearLayout(this); header.setGravity(Gravity.CENTER_VERTICAL);
-        TextView brand=text(getString(R.string.app_name),22,ink); brand.setLetterSpacing(.01f); brand.setTypeface(null,Typeface.BOLD);
+        ImageView badge=new ImageView(this);badge.setImageResource(R.drawable.chicken_badge);badge.setScaleType(ImageView.ScaleType.FIT_CENTER);badge.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        LinearLayout.LayoutParams badgeLayout=new LinearLayout.LayoutParams(dp(72),dp(82));badgeLayout.rightMargin=dp(10);header.addView(badge,badgeLayout);
+        TextView brand=text(getString(R.string.app_name),34,ink); brand.setLetterSpacing(.01f); brand.setTypeface(inkTypeface);
         header.addView(brand,new LinearLayout.LayoutParams(0,-2,1));
-        Button settings=button(getString(R.string.ui_001_settings),card,ink); settings.setTextSize(13); header.addView(settings,new LinearLayout.LayoutParams(dp(88),dp(44))); settings.setOnClickListener(v -> showSettings());
+        Button settings=button("",paper,ink);settings.setContentDescription(getString(R.string.ui_001_settings));settings.setBackground(null);settings.setCompoundDrawablesWithIntrinsicBounds(glyph("gear",30),null,null,null);header.addView(settings,new LinearLayout.LayoutParams(dp(48),dp(48))); settings.setOnClickListener(v -> showSettings());
         add(root,header,0);
-        add(root,text(getString(R.string.ui_002_home_is_a_tap_away),28,ink),26);
-        add(root,text(getString(R.string.ui_003_a_cozy_connection_to_your_own_little_corne),14,muted),7);
-        mascot=new NestView(); LinearLayout.LayoutParams hero=new LinearLayout.LayoutParams(-1,dp(206)); hero.topMargin=dp(12); root.addView(mascot,hero);
-        title=text(getString(R.string.ui_004_ready_when_you_are),26,ink); title.setGravity(Gravity.CENTER); title.setTypeface(null,Typeface.BOLD); add(root,title,6);
+        TextView headline=text(getString(R.string.ui_002_home_is_a_tap_away),42,ink); headline.setTypeface(inkTypeface);headline.setMaxLines(2); add(root,headline,18);
+        View underline=new View(this) {
+            final Paint pen=new Paint(Paint.ANTI_ALIAS_FLAG);
+            @Override protected void onDraw(Canvas canvas) {
+                pen.setColor(0xffffd34c);pen.setStyle(Paint.Style.STROKE);pen.setStrokeWidth(dp(7));pen.setStrokeCap(Paint.Cap.ROUND);
+                Path line=new Path();line.moveTo(dp(3),dp(6));line.cubicTo(getWidth()*.25f,dp(3),getWidth()*.7f,dp(10),getWidth()-dp(4),dp(5));canvas.drawPath(line,pen);
+            }
+        };
+        underline.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        root.addView(underline,new LinearLayout.LayoutParams(dp(304),dp(13)));
+
+        title=text(getString(R.string.ui_004_ready_when_you_are),21,ink); title.setGravity(Gravity.CENTER); title.setTypeface(inkTypeface); add(root,title,12);
+        title.setPadding(dp(22),dp(12),dp(22),dp(12)); title.setBackground(background(0xffeee8da,8));
+        LinearLayout.LayoutParams titleLayout=new LinearLayout.LayoutParams(-2,-2);titleLayout.gravity=Gravity.CENTER_HORIZONTAL;titleLayout.topMargin=dp(12);title.setLayoutParams(titleLayout);
         subtitle=text(getString(R.string.ui_005_your_little_nest_is_just_one_tap_away),14,muted); subtitle.setGravity(Gravity.CENTER); add(root,subtitle,8);
-        action=button(getString(R.string.ui_006_let_s_go_home),peach,ink); add(root,action,24); action.setOnClickListener(v -> {
+        action=primaryButton(getString(R.string.ui_006_let_s_go_home));action.setTextSize(24);action.setMinHeight(dp(82));action.setPadding(dp(36),0,dp(36),0);add(root,action,16); action.setOnClickListener(v -> {
             if(TunnelService.alive) startService(new Intent(this,TunnelService.class).setAction(TunnelService.STOP));
             else connect();
         });
-        LinearLayout paths=panel(); add(root,paths,20);
-        lan=pathRow(paths,getString(R.string.ui_007_home_network),getString(R.string.ui_008_not_connected)); internet=pathRow(paths,getString(R.string.ui_009_internet),getString(R.string.ui_008_not_connected));
+        LinearLayout paths=panel(); add(root,paths,14);
+        lan=pathRow(paths,getString(R.string.ui_007_home_network),getString(R.string.ui_008_not_connected));
+        View divider=new View(this);divider.setBackgroundColor(0xffe5dcc5);paths.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
+        internet=pathRow(paths,getString(R.string.ui_009_internet),getString(R.string.ui_008_not_connected));
         LinearLayout destination=panel(); add(root,destination,12);
-        add(destination,text(getString(R.string.ui_010_your_cozy_corner),12,muted),0); profile=text(getString(R.string.ui_011_let_s_set_up_your_home),15,ink); add(destination,profile,6);
+        add(destination,text(getString(R.string.ui_010_your_cozy_corner),15,muted),0); profile=text(getString(R.string.ui_011_let_s_set_up_your_home),19,ink);profile.setCompoundDrawablesWithIntrinsicBounds(glyph("nas",36),null,null,null);profile.setCompoundDrawablePadding(dp(16)); add(destination,profile,6);
         device=text("",13,amber); device.setTextIsSelectable(true); add(root,device,12);
+        copyDevice=button(getString(R.string.copy_device_id),card,mint); add(root,copyDevice,8);
+        copyDevice.setOnClickListener(v -> {
+            String node=status().getString("node","");
+            if(!node.isEmpty()) { ((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("ZeroTier device ID",node)); Toast.makeText(this,R.string.device_id_copied,Toast.LENGTH_SHORT).show(); }
+        });
+        LinearLayout guide=panel(); add(root,guide,16);
+        guideToggle=button(getString(R.string.guide_title)+"  ›",card,ink);add(guide,guideToggle,0);
+        guideToggle.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);guideToggle.setTextSize(21);guideToggle.setCompoundDrawablesWithIntrinsicBounds(glyph("book",28),null,null,null);guideToggle.setCompoundDrawablePadding(dp(14));guideToggle.setPadding(0,0,0,0);
+        guideToggle.setBackground(null);
+        guideToggle.setOnClickListener(v -> {guideExpanded=!guideExpanded;render();});
+        add(guide,text(getString(R.string.guide_summary),13,muted),2);
+        guidance=text("",14,muted); add(guide,guidance,10);
+        configureGuide=button(getString(R.string.guide_configure),paper,mint); add(guide,configureGuide,12);
+        configureGuide.setOnClickListener(v -> showSettings());
         mode=text(getString(R.string.ui_012_one_little_tap_a_little_closer_to_home),12,muted); mode.setGravity(Gravity.CENTER); add(root,mode,22);
         developerPanel=panel(); add(root,developerPanel,18);
         add(developerPanel,text(getString(R.string.ui_013_developer_tools),15,mint),0);
@@ -75,14 +108,14 @@ public final class MainActivity extends Activity {
         if(saved!=null && saved.getBoolean("restoreSettings",false)) handler.post(this::showSettings);
     }
     private TextView pathRow(LinearLayout parent,String label,String value) {
-        LinearLayout row=new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL); row.setPadding(0,dp(7),0,dp(7));
-        row.addView(text(label,14,ink),new LinearLayout.LayoutParams(0,-2,1)); TextView result=text(value,13,muted); row.addView(result); add(parent,row,0); return result;
+        LinearLayout row=new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL); row.setPadding(0,dp(9),0,dp(9));
+        row.addView(text(label,19,ink),new LinearLayout.LayoutParams(0,-2,1)); TextView result=text(value,17,muted); result.setPadding(dp(12),dp(8),dp(12),dp(8)); row.addView(result); add(parent,row,0); return result;
     }
     @Override protected void onResume() { super.onResume(); handler.removeCallbacks(refresh); refresh.run(); }
     @Override protected void onPause() { handler.removeCallbacks(refresh); super.onPause(); }
     @Override protected void onSaveInstanceState(Bundle out) {
         if(settingsDialog!=null && settingsDialog.isShowing()) captureDraft();
-        out.putBundle("draftSettings",draftSettings);out.putBoolean("restoreSettings",restoreLanguageSettings || (settingsDialog!=null && settingsDialog.isShowing()));super.onSaveInstanceState(out);
+        out.putBoolean("guideExpanded",guideExpanded);out.putBundle("draftSettings",draftSettings);out.putBoolean("restoreSettings",restoreLanguageSettings || (settingsDialog!=null && settingsDialog.isShowing()));super.onSaveInstanceState(out);
     }
     @Override protected void onDestroy() { handler.removeCallbacksAndMessages(null); super.onDestroy(); }
     private void render() {
@@ -104,25 +137,35 @@ public final class MainActivity extends Activity {
         } else if(s.getString("message","").matches(".*(失败|错误|撤销).*")) {
             description=getString(R.string.ui_027_the_connection_stopped_try_again_or_check);
         }
-        title.setText(heading); title.setTextColor(ok?mint:ink); subtitle.setText(description);
-        mascot.update(ok,busy,phase.equals("degraded")||phase.equals("authorization"));
+        title.setText(heading);title.setCompoundDrawablesWithIntrinsicBounds(ok?glyph("ready",25):null,null,null,null);title.setCompoundDrawablePadding(dp(8)); title.setTextColor(ink); title.setBackground(background(ok?0xffdce9bc:phase.equals("degraded")?0xfff7d8bf:0xffeee8da,8)); subtitle.setText(description);subtitle.setVisibility((!active||ok)?View.GONE:View.VISIBLE);
+        boolean authorization=active && (phase.equals("authorization")||phase.equals("joining"));
+        copyDevice.setVisibility(authorization && !s.getString("node","").isEmpty()?View.VISIBLE:View.GONE);
+        String help=getString(R.string.guide_steps);
+        if(authorization) help=getString(R.string.guide_authorization);
+        else if(active && phase.equals("degraded")) help=(!s.getBoolean("lanReady",false)?getString(R.string.guide_lan)+"\n\n":"")+(!s.getBoolean("internetReady",false)?getString(R.string.guide_internet)+"\n\n":"")+getString(R.string.guide_recovery);
+        guidance.setText(help);
+        boolean showGuide=guideExpanded||authorization||(active && phase.equals("degraded"));
+        guidance.setVisibility(showGuide?View.VISIBLE:View.GONE);
+        guideToggle.setText(getString(R.string.guide_title)+(showGuide?"  ⌄":"  ›"));
+        configureGuide.setVisibility(showGuide&&!active?View.VISIBLE:View.GONE);
         action.setText(active?(busy?getString(R.string.ui_028_cancel_connection):getString(R.string.ui_029_disconnect)):getString(R.string.ui_006_let_s_go_home));
-        action.setBackgroundTintList(ColorStateList.valueOf(active?card:peach)); action.setTextColor(ink);
+        action.setBackground(new android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(0x22304455),background(peach,12),null)); action.setTextColor(ink);
         setPath(lan,active,s.getBoolean("lanReady",false),phase);
         setPath(internet,active,s.getBoolean("internetReady",false),phase);
         String network=settings().getString("network","");
-        profile.setText(network.isEmpty()?getString(R.string.ui_011_let_s_set_up_your_home):getString(R.string.ui_030_your_home_is_all_set));
+        profile.setText(network.isEmpty()?getString(R.string.ui_011_let_s_set_up_your_home):getString(R.string.home_nas)+"\n"+getString(R.string.profile_hint));
         String node=s.getString("node","");
         device.setVisibility(active && (phase.equals("authorization")||phase.equals("joining")) && !node.isEmpty()?View.VISIBLE:View.GONE);
         device.setText(getString(R.string.device_id,node));
         boolean dev=settings().getBoolean("developer",false); developerPanel.setVisibility(dev?View.VISIBLE:View.GONE);
+        mode.setVisibility(dev?View.VISIBLE:View.GONE);
         mode.setText(dev?getString(R.string.ui_033_developer_mode_nestlink_0_6_0):getString(R.string.ui_012_one_little_tap_a_little_closer_to_home));
         if(dev) diagnostics.setText(getString(R.string.ui_034_status)+s.getString("message","")+getString(R.string.ui_035_device)+node+getString(R.string.ui_036_address)+s.getString("address","")+"\n"+s.getString("healthLog","")+"\n"+s.getString("moons","")+"\n"+s.getString("diagnostics",""));
         else diagnostics.setText("");
     }
     private void setPath(TextView view,boolean active,boolean ready,String phase) {
-        view.setText(!active?getString(R.string.ui_008_not_connected):ready?getString(R.string.ui_037_ready):phase.equals("degraded")?getString(R.string.ui_038_retrying):getString(R.string.ui_039_checking));
-        view.setTextColor(active && ready?mint:active && phase.equals("degraded")?amber:muted);
+        view.setText(!active?getString(R.string.ui_008_not_connected):ready?getString(R.string.path_available):phase.equals("degraded")?getString(R.string.ui_038_retrying):getString(R.string.ui_039_checking));
+        view.setTextColor(ink);view.setBackground(null);view.setCompoundDrawablesWithIntrinsicBounds(glyph(active&&ready?"ready":active&&phase.equals("degraded")?"warning":"idle",26),null,null,null);view.setCompoundDrawablePadding(dp(10));
     }
     private void connect() {
         if(settings().getString("network","").isEmpty()||settings().getString("gateway","").isEmpty()) { showSettings(); return; }
@@ -196,21 +239,24 @@ public final class MainActivity extends Activity {
             }).setNegativeButton(getString(R.string.ui_052_close),null).show();
     }
     private void showSettings() {
-        ScrollView scroll=new ScrollView(this); LinearLayout body=column(); body.setPadding(dp(22),dp(8),dp(22),dp(16)); scroll.addView(body);
-        Button language=button(getString(R.string.language)+"   ·   "+getString(R.string.language_choice),card,ink);
-        add(body,language,0);language.setOnClickListener(v -> chooseLanguage());
-        add(body,text(getString(R.string.language_hint),12,muted),7);
-        add(body,text(getString(R.string.ui_054_make_yourself_at_home),14,muted),18);
+        ScrollView scroll=new ScrollView(this); LinearLayout body=column(); body.setPadding(dp(20),dp(4),dp(20),dp(16)); scroll.addView(body);
+        LinearLayout languageRow=new LinearLayout(this);languageRow.setGravity(Gravity.CENTER_VERTICAL);
+        languageRow.addView(text(getString(R.string.language),19,ink),new LinearLayout.LayoutParams(0,-2,1));
+        Button language=button(("zh".equals(settings().getString("language","en"))?"简体中文":"English")+"  ⌄",card,ink);
+        languageRow.addView(language,new LinearLayout.LayoutParams(dp(230),dp(48)));add(body,languageRow,4);language.setOnClickListener(v -> chooseLanguage());
+        Button guide=button(getString(R.string.guide_title)+"  ›",paper,ink);
+        guide.setCompoundDrawablesWithIntrinsicBounds(glyph("book",24),null,null,null);guide.setCompoundDrawablePadding(dp(12));guide.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        guide.setOnClickListener(v -> new AlertDialog.Builder(this).setTitle(R.string.guide_title).setMessage(getString(R.string.guide_steps)+"\n\n"+getString(R.string.ui_061_disconnect_to_edit_your_connection_moon_he)+"\n\n"+getString(R.string.ui_063_show_connection_logs_peer_paths_and_diagno)).setPositiveButton(R.string.ui_052_close,null).show());
         LinearLayout qrActions=new LinearLayout(this);
         Button scan=button(getString(R.string.ui_055_scan_to_join),paper,mint),code=button(getString(R.string.ui_056_show_qr_code),paper,ink);
         qrActions.addView(scan,new LinearLayout.LayoutParams(0,dp(50),1));
         LinearLayout.LayoutParams codeParams=new LinearLayout.LayoutParams(0,dp(50),1);codeParams.leftMargin=dp(8);qrActions.addView(code,codeParams);add(body,qrActions,14);
-        scan.setEnabled(!TunnelService.alive);scan.setOnClickListener(v -> scanNetwork());code.setOnClickListener(v -> showNetworkCode());
+        scan.setCompoundDrawablesWithIntrinsicBounds(glyph("qr",25),null,null,null);code.setCompoundDrawablesWithIntrinsicBounds(glyph("qr",25),null,null,null);scan.setCompoundDrawablePadding(dp(8));code.setCompoundDrawablePadding(dp(8));scan.setEnabled(!TunnelService.alive);scan.setOnClickListener(v -> scanNetwork());code.setOnClickListener(v -> showNetworkCode());
         EditText network=editNetwork=field(body,getString(R.string.ui_057_zerotier_network_id),settings().getString("network",""));
         EditText gateway=editGateway=field(body,getString(R.string.ui_058_nas_zerotier_ipv4_address),settings().getString("gateway",""));
         EditText port=editPort=field(body,getString(R.string.ui_059_nas_proxy_port),String.valueOf(settings().getInt("port",7890))); port.setInputType(2);
         EditText moons=editMoons=new EditText(this);moons.setText(settings().getString("moons",""));
-        moonSummary=button(getString(R.string.ui_060_moon_helpers),paper,ink);add(body,moonSummary,18);moonSummary.setOnClickListener(v -> manageMoons());
+        moonSummary=button(getString(R.string.ui_060_moon_helpers),paper,ink);add(body,moonSummary,14);moonSummary.setOnClickListener(v -> manageMoons());
         moons.addTextChangedListener(new android.text.TextWatcher() {
             public void beforeTextChanged(CharSequence value,int start,int count,int after) {}
             public void onTextChanged(CharSequence value,int start,int before,int count) {updateMoonSummary();}
@@ -220,15 +266,21 @@ public final class MainActivity extends Activity {
             network.setText(draftSettings.getString("network",""));gateway.setText(draftSettings.getString("gateway",""));
             port.setText(draftSettings.getString("port","7890"));moons.setText(draftSettings.getString("moons",""));draftSettings=null;
         }
-        add(body,text(getString(R.string.ui_061_disconnect_to_edit_your_connection_moon_he),12,muted),8);
+
         for(EditText field:new EditText[]{network,gateway,port,moons}) field.setEnabled(!TunnelService.alive);
-        Switch developer=new Switch(this); developer.setText(getString(R.string.ui_062_developer_mode)); developer.setTextColor(ink); developer.setTextSize(15); developer.setChecked(settings().getBoolean("developer",false)); add(body,developer,22);
-        add(body,text(getString(R.string.ui_063_show_connection_logs_peer_paths_and_diagno),12,muted),5);
+        Switch developer=new Switch(this); developer.setText(getString(R.string.ui_062_developer_mode)); developer.setTextColor(ink); developer.setTextSize(19);developer.setTypeface(inkTypeface); developer.setChecked(settings().getBoolean("developer",false));developer.setPadding(dp(16),dp(12),dp(16),dp(12));developer.setBackground(background(card,12)); add(body,developer,14);
+
         developer.setOnCheckedChangeListener((v,checked) -> { settings().edit().putBoolean("developer",checked).apply(); if(!checked) status().edit().remove("diagnostics").apply(); render(); });
-        String id=status().getString("node","");
-        if(!id.isEmpty()) { TextView identity=text(getString(R.string.ui_031_device_id)+id,12,muted); identity.setTextIsSelectable(true); add(body,identity,18); }
-        add(body,text(getString(R.string.ui_064_nestlink_0_6_0_one_vpn_for_your_home_netwo),12,muted),18);
-        AlertDialog dialog=new AlertDialog.Builder(this).setTitle(getString(R.string.ui_065_your_nest_settings)).setView(scroll).setPositiveButton(getString(R.string.ui_066_save),null).setNegativeButton(getString(R.string.ui_052_close),null).create();
+        add(body,guide,16);
+        add(body,text(getString(R.string.ui_026_first_visit_approve_this_device_in_your_co),12,muted),10);
+        add(body,text(getString(R.string.ui_064_nestlink_0_6_0_one_vpn_for_your_home_netwo),11,muted),10);
+        LinearLayout settingsHeader=new LinearLayout(this);settingsHeader.setGravity(Gravity.CENTER_VERTICAL);settingsHeader.setPadding(dp(18),dp(12),dp(18),dp(8));
+        Button back=button("‹",paper,ink);back.setTextSize(32);back.setBackground(null);back.setContentDescription(getString(R.string.ui_052_close));settingsHeader.addView(back,new LinearLayout.LayoutParams(dp(48),dp(48)));
+        TextView heading=text(getString(R.string.ui_065_your_nest_settings),24,ink);heading.setGravity(Gravity.CENTER);heading.setTypeface(inkTypeface);settingsHeader.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
+        Button save=button(getString(R.string.ui_066_save),peach,ink);settingsHeader.addView(save,new LinearLayout.LayoutParams(dp(76),dp(48)));
+        AlertDialog dialog=new AlertDialog.Builder(this).setCustomTitle(settingsHeader).setView(scroll).setPositiveButton(getString(R.string.ui_066_save),null).setNegativeButton(getString(R.string.ui_052_close),null).create();
+        back.setOnClickListener(v -> dialog.dismiss());
+        save.setOnClickListener(v -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick());
         settingsDialog=dialog;
         dialog.setOnShowListener(v -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(button -> {
             if(TunnelService.alive) { dialog.dismiss(); return; }
@@ -240,6 +292,8 @@ public final class MainActivity extends Activity {
                 settings().edit().putString("network",net).putString("gateway",nas).putInt("port",number).putString("moons",moon).apply(); dialog.dismiss(); render();
             } catch(Exception e) { Toast.makeText(this,AppLanguage.inputError(this,e),Toast.LENGTH_LONG).show(); }
         })); dialog.show();
+        ((View)dialog.getButton(AlertDialog.BUTTON_POSITIVE).getParent()).setVisibility(View.GONE);
+        if(dialog.getWindow()!=null) {dialog.getWindow().setLayout(-1,-1);dialog.getWindow().setDimAmount(0f);dialog.getWindow().setStatusBarColor(paper);dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(paper));}
     }
     private boolean moonSnapshotFresh() {
         long checked=status().getLong("moonCheckedAt",0),age=SystemClock.elapsedRealtime()-checked;
@@ -327,32 +381,33 @@ public final class MainActivity extends Activity {
         }
     }
     private EditText field(LinearLayout parent,String label,String value) {
-        add(parent,text(label,12,muted),16); EditText input=new EditText(this); input.setSingleLine(true); input.setTextSize(15); input.setTextColor(ink); input.setHintTextColor(muted); input.setHint(label); input.setText(value); input.setInputType(1|0x80000); input.setPadding(dp(12),dp(10),dp(12),dp(10)); input.setBackground(background(card,16)); add(parent,input,6); return input;
+        add(parent,text(label,17,ink),14); EditText input=new EditText(this); input.setSingleLine(true); input.setTextSize(17); input.setTextColor(ink); input.setHintTextColor(muted); input.setHint(label); input.setText(value); input.setInputType(1|0x80000); input.setPadding(dp(14),dp(13),dp(14),dp(13)); input.setBackground(background(card,10)); add(parent,input,6); return input;
     }
+    private SketchGlyph glyph(String kind,int size) {return new SketchGlyph(getResources().getDisplayMetrics().density,kind,size);}
     private int dp(int n) { return Math.round(n*getResources().getDisplayMetrics().density); }
     private LinearLayout column() { LinearLayout v=new LinearLayout(this); v.setOrientation(LinearLayout.VERTICAL); return v; }
-    private LinearLayout panel() { LinearLayout v=column(); v.setPadding(dp(18),dp(14),dp(18),dp(14)); v.setBackground(background(card,24)); v.setElevation(dp(1)); return v; }
-    private GradientDrawable background(int color,int radius) { GradientDrawable d=new GradientDrawable(); d.setColor(color); d.setCornerRadius(dp(radius)); return d; }
-    private TextView text(String value,int size,int color) { TextView t=new TextView(this); t.setText(value); t.setTextSize(size); t.setTextColor(color); t.setLineSpacing(dp(2),1); return t; }
-    private Button button(String value,int color,int foreground) { Button b=new Button(this); b.setText(value); b.setTextSize(16); b.setAllCaps(false); b.setTextColor(foreground); b.setMinHeight(dp(54)); b.setBackground(new android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(0x224c3c37),background(color,20),null));b.setTypeface(null,Typeface.BOLD);b.setPadding(dp(12),0,dp(12),0); b.setStateListAnimator(null); return b; }
-    private void add(LinearLayout parent,View child,int top) { LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2); p.topMargin=dp(top); parent.addView(child,p); }
-    private final class NestView extends View {
-        private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);
-        private final Bitmap home=BitmapFactory.decodeResource(getResources(),R.drawable.nest_mascot);
-        private boolean connected,busy,warning;
-        NestView() {super(MainActivity.this);setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);}
-        void update(boolean c,boolean b,boolean w) {if(c!=connected||b!=busy||w!=warning) {connected=c;busy=b;warning=w;invalidate();}}
-        @Override protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);float x=getWidth()/2f,y=getHeight()/2f;
-            float bob=busy?(float)Math.sin(SystemClock.uptimeMillis()/650.0)*dp(3):0;
-            paint.setColor(0xffffe9de);canvas.drawOval(x-dp(98),y-dp(73),x+dp(98),y+dp(85),paint);
-            paint.setColor(0xffe6eee1);canvas.drawCircle(x+dp(79),y-dp(51),dp(24),paint);
-            paint.setColor(0xffffedbb);canvas.drawCircle(x-dp(84),y-dp(53),dp(11),paint);
-            paint.setColor(0xfff1c8d2);canvas.drawCircle(x+dp(101),y+dp(40),dp(7),paint);
-            float size=dp(220);canvas.drawBitmap(home,null,new RectF(x-size/2,y-size/2+bob,x+size/2,y+size/2+bob),paint);
-            if(connected) {paint.setColor(0xff749878);flower(canvas,x-dp(94),y+dp(47),dp(7));}
-            if(busy) {paint.setColor(0xff9b7769);for(int i=0;i<3;i++) {float pulse=(float)(.45+.55*(1+Math.sin(SystemClock.uptimeMillis()/280.0-i))*.5);paint.setAlpha((int)(255*pulse));canvas.drawCircle(x-dp(13)+i*dp(13),y+dp(94),dp(3),paint);}paint.setAlpha(255);postInvalidateDelayed(40);}
-        }
-        private void flower(Canvas c,float x,float y,float size) {for(int i=0;i<5;i++){double angle=i*Math.PI*2/5;c.drawCircle(x+(float)Math.cos(angle)*size,y+(float)Math.sin(angle)*size,size*.58f,paint);}paint.setColor(0xffffd58b);c.drawCircle(x,y,size*.48f,paint);}
+    private LinearLayout panel() { LinearLayout v=column(); v.setPadding(dp(20),dp(18),dp(20),dp(18)); v.setBackground(background(card,12)); v.setElevation(0); return v; }
+    private android.graphics.drawable.Drawable background(int color,int radius) {
+        return new SketchSurface(getResources().getDisplayMetrics().density,color);
     }
+    private TextView text(String value,int size,int color) { TextView t=new TextView(this); t.setText(value); t.setTypeface(inkTypeface); t.setTextSize(size); t.setTextColor(color); t.setLineSpacing(dp(2),1); return t; }
+    private Button button(String value,int color,int foreground) { return decorateButton(new Button(this),value,color,foreground); }
+    private Button primaryButton(String value) {
+        Button b=new Button(this) {
+            private final SketchGlyph power=glyph("power",32);
+            @Override protected void onDraw(Canvas canvas) {
+                float icon=dp(32), gap=dp(14), width=getPaint().measureText(getText().toString());
+                canvas.save();canvas.translate((icon+gap)/2,0);super.onDraw(canvas);canvas.restore();
+                int left=Math.round((getWidth()-width-icon-gap)/2),top=(getHeight()-dp(32))/2;
+                power.setBounds(left,top,left+dp(32),top+dp(32));power.draw(canvas);
+            }
+        };
+        return decorateButton(b,value,peach,ink);
+    }
+    private Button decorateButton(Button b,String value,int color,int foreground) {
+        b.setText(value);b.setTextSize(16);b.setAllCaps(false);b.setTextColor(foreground);b.setMinHeight(dp(54));
+        b.setBackground(new android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(0x224c3c37),background(color,12),null));
+        b.setTypeface(inkTypeface);b.setPadding(dp(12),0,dp(12),0);b.setStateListAnimator(null);return b;
+    }
+    private void add(LinearLayout parent,View child,int top) { LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2); p.topMargin=dp(top); parent.addView(child,p); }
 }

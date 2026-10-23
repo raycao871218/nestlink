@@ -26,14 +26,14 @@ public final class ScanActivity extends Activity implements TextureView.SurfaceT
     private boolean resumed,readingImage,finished;
     private int width,height,orientation;
     private long lastFrame;
-    private final int paper=Color.rgb(255,248,240),mint=Color.rgb(66,109,89);
+    private final int paper=Color.rgb(255,251,237),mint=Color.rgb(89,106,48);
     @Override protected void attachBaseContext(Context base) {super.attachBaseContext(AppLanguage.wrap(base));}
     @Override public void onCreate(Bundle saved) {
-        super.onCreate(saved);getWindow().setStatusBarColor(paper);getWindow().setNavigationBarColor(Build.VERSION.SDK_INT>=27?paper:0xff4c3c37);
+        super.onCreate(saved);getWindow().setStatusBarColor(paper);getWindow().setNavigationBarColor(Build.VERSION.SDK_INT>=27?paper:0xff4c2718);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(paper);
         TextView title=label(getString(R.string.ui_092_find_your_little_nest),23);title.setPadding(dp(24),dp(24),dp(24),dp(12));root.addView(title);
-        hint=label(getString(R.string.ui_093_place_a_network_qr_code_in_the_frame_then),14);hint.setTextColor(0xff806c62);hint.setPadding(dp(24),0,dp(24),dp(18));root.addView(hint);
+        hint=label(getString(R.string.ui_093_place_a_network_qr_code_in_the_frame_then),14);hint.setTextColor(0xff7e6b55);hint.setPadding(dp(24),0,dp(24),dp(18));root.addView(hint);
         FrameLayout view=new FrameLayout(this);preview=new TextureView(this);preview.setSurfaceTextureListener(this);view.addView(preview,new FrameLayout.LayoutParams(-1,-1));view.addView(new GuideView(),new FrameLayout.LayoutParams(-1,-1));root.addView(view,new LinearLayout.LayoutParams(-1,0,1));
         LinearLayout buttons=new LinearLayout(this);buttons.setPadding(dp(18),dp(14),dp(18),dp(20));
         Button back=button(getString(R.string.ui_094_back));buttons.addView(back,new LinearLayout.LayoutParams(0,dp(54),1));back.setOnClickListener(v -> finish());
@@ -126,8 +126,8 @@ public final class ScanActivity extends Activity implements TextureView.SurfaceT
     @Override public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {closeCamera();return true;}
     @Override public void onSurfaceTextureUpdated(SurfaceTexture surface) {}
     private int dp(int n) {return Math.round(n*getResources().getDisplayMetrics().density);}
-    private TextView label(String text,int size) {TextView v=new TextView(this);v.setText(text);v.setTextColor(0xff4c3c37);v.setTextSize(size);return v;}
-    private Button button(String text) {Button b=new Button(this);b.setText(text);b.setTextColor(mint);b.setAllCaps(false);b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xffffe7dc));return b;}
+    private TextView label(String text,int size) {TextView v=new TextView(this);v.setText(text);v.setTextColor(0xff4c2718);v.setTextSize(size);return v;}
+    private Button button(String text) {Button b=new Button(this);b.setText(text);b.setTextColor(mint);b.setAllCaps(false);b.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x22303b43),new SketchSurface(getResources().getDisplayMetrics().density,0xffffd34c),null));return b;}
     private final class GuideView extends View {
         private final Paint paint=new Paint(3);
         GuideView() {super(ScanActivity.this);setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);}

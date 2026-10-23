@@ -27,11 +27,11 @@ final class VPNController: ObservableObject {
     var title: String {
         if busy { return "正在准备" }
         switch status {
-        case .connecting: return snapshot["phase"] as? String == "authorization" ? "等待设备授权" : "正在连接回家"
-        case .connected: return verified ? "已经到家了" : "正在确认连接"
+        case .connecting: return snapshot["phase"] as? String == "authorization" ? "等待设备授权" : "正在连接"
+        case .connected: return verified ? "已连接" : "正在确认连接"
         case .reasserting: return "正在恢复连接"
         case .disconnecting: return "正在断开"
-        default: return "随时，连接回家"
+        default: return "未连接"
         }
     }
     var detail: String {

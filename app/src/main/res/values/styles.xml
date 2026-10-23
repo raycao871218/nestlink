@@ -1,14 +1,14 @@
 <resources>
 <style name="NestBase" parent="android:style/Theme.Material.Light.NoActionBar">
-<item name="android:fontFamily">sans-serif-rounded</item><item name="android:colorAccent">@color/nest_sage</item>
+<item name="android:fontFamily">sans-serif</item><item name="android:colorAccent">@color/nest_sage</item>
 <item name="android:windowLightStatusBar">true</item>
 <item name="android:windowBackground">@color/nest_cream</item><item name="android:colorBackground">@color/nest_cream</item>
-<item name="android:textColorPrimary">@color/nest_ink</item><item name="android:textColorSecondary">#806C62</item>
+<item name="android:textColorPrimary">@color/nest_ink</item><item name="android:textColorSecondary">#7E6B55</item>
 <item name="android:alertDialogTheme">@style/NestDialog</item>
 </style>
 <style name="NestTheme" parent="NestBase"/>
 <style name="NestDialog" parent="android:style/Theme.Material.Light.Dialog.Alert">
-<item name="android:fontFamily">sans-serif-rounded</item><item name="android:colorAccent">@color/nest_sage</item>
+<item name="android:fontFamily">sans-serif</item><item name="android:colorAccent">@color/nest_sage</item>
 <item name="android:windowBackground">@drawable/dialog_surface</item><item name="android:colorBackground">@color/nest_cream</item>
-<item name="android:textColorPrimary">@color/nest_ink</item><item name="android:textColorSecondary">#806C62</item>
+<item name="android:textColorPrimary">@color/nest_ink</item><item name="android:textColorSecondary">#7E6B55</item>
 </style></resources>

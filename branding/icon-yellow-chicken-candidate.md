@@ -1,0 +1,9 @@
+# Yellow-feathered chicken icon candidate
+
+Generated with the built-in image_gen tool on 2026-10-22. Preview candidate; not yet wired into application icons.
+
+Asset: `branding/icon-yellow-chicken-candidate.png`.
+
+## Final prompt
+
+Use case: stylized-concept. Asset type: one finished square mobile app icon. Subject: an original ugly-cute YELLOW-FEATHERED CHICKEN mascot, definitely a chicken, not a pigeon or duck. A comically round squat butter-yellow hen with an awkward pear-shaped body, ridiculously tiny uneven wings, short orange legs splayed apart, a tiny crooked dusty-red comb and small red wattle, stubby orange triangular beak, tiny slightly misaligned black dot eyes staring blankly into space. Three messy little tail feathers poke out from one side. Endearingly dumb, mildly bewildered, imperfect and memorable, like a beloved scruffy hand-drawn reaction sticker. No smiling human mouth or blush. Mostly yellow plumage, a paler yellow belly patch, minimal plumage detail. Style: deliberately crude hand drawing with chunky wobbly dark-brown felt-tip outlines, irregular variable line weight, loose flat gouache/marker fills with tiny unpainted gaps and overlapping strokes. Simple broad color areas; no fine hatching, no realism. Reference spirit: casual hand-inked ugly-cute sticker penmanship rather than smooth vector kawaii. Colors: warm golden yellow, pale custard, muted tomato red, orange feet, dark cocoa outlines. Background: clean solid pale warm ivory, fully opaque, full-bleed square, no gradients. Composition: one chicken centered, slight head tilt, a little more space above the crooked comb; whole body and feet visible, silhouette occupies about 74 percent of the square and reads at 48px. No props, no nest, no house, no cable, no devices, no text, no letters, no border, no card, no icon grid, no pre-rounded corners, no drop shadow, no watermark, no 3D. Produce exactly one icon.

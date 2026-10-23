@@ -1,1 +1,1 @@
-<inset xmlns:android="http://schemas.android.com/apk/res/android" android:inset="6dp"><bitmap android:src="@drawable/nest_mascot" android:gravity="fill"/></inset>
+<inset xmlns:android="http://schemas.android.com/apk/res/android" android:inset="22dp"><bitmap android:src="@drawable/chicken_launcher" android:gravity="fill"/></inset>

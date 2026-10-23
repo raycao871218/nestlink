@@ -28,3 +28,7 @@ The iPad QR implementation uses Apple's system AVFoundation, PhotosUI, Vision,
 ImageIO, and CoreImage frameworks. It does not bundle ZXing or upload images.
 
 The complete ZXing Apache-2.0 license is bundled in app/src/main/assets/licenses/ZXing-LICENSE.txt and included in the APK.
+
+## ZCOOL KuaiLe font
+
+Unmodified ZCOOL KuaiLe Regular from Google Fonts, Copyright 2018 The ZCOOL KuaiLe Project Authors, under SIL Open Font License 1.1. Source: https://github.com/googlefonts/zcool-kuaile . License is bundled in Android assets/licenses and iOS Fonts/OFL.txt.

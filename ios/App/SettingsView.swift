@@ -16,42 +16,59 @@ struct SettingsView: View {
     @State private var loaded = false
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    Picker(tr("语言", language), selection: $language) {
-                        Text("English").tag("en"); Text("简体中文").tag("zh")
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack {
+                        Text(tr("语言", language)).font(.ink(20, relativeTo: .headline))
+                        Spacer()
+                        Picker(tr("语言", language), selection: $language) {
+                            Text("English").tag("en"); Text("简体中文").tag("zh")
+                        }.labelsHidden()
+                    }.padding(14).stickerSurface(Color(red: 1, green: 0.993, blue: 0.965))
+                    HStack(spacing: 12) {
+                        Button { scanning = true } label: {
+                            Label(tr("扫码入网", language), systemImage: "qrcode.viewfinder").frame(maxWidth: .infinity)
+                        }.disabled(vpn.active)
+                        Button {
+                            do { code = try QRPayload.encode(draft); showingCode = true }
+                            catch { self.error = error.localizedDescription }
+                        } label: { Label(tr("显示入网码", language), systemImage: "qrcode").frame(maxWidth: .infinity) }
                     }
-                    Text(tr("切换语言不会断开连接或改变设备身份。", language)).font(.footnote).foregroundStyle(.secondary)
-                }
-                Section(tr("连接参数", language)) {
-                    TextField(tr("16 位 ZeroTier 网络 ID", language), text: $draft.network)
-                    TextField(tr("NAS 的 ZeroTier IPv4 地址", language), text: $draft.gateway).keyboardType(.decimalPad)
-                    TextField(tr("NAS 检测端口", language), text: $draft.port).keyboardType(.numberPad)
-                }.disabled(vpn.active)
-                Section {
-                    Button { scanning = true } label: { Label(tr("扫码入网", language), systemImage: "qrcode.viewfinder") }.disabled(vpn.active)
-                    Button {
-                        do { code = try QRPayload.encode(draft); showingCode = true }
-                        catch { self.error = error.localizedDescription }
-                    } label: { Label(tr("显示入网码", language), systemImage: "qrcode") }
-                } footer: { Text(tr("二维码只填入设置；不会自动连接，也不替代 Controller 授权。", language)) }
-                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(tr("16 位 ZeroTier 网络 ID", language)).font(.ink(17, relativeTo: .subheadline))
+                        TextField(tr("16 位 ZeroTier 网络 ID", language), text: $draft.network)
+                        Text(tr("NAS 虚拟 IPv4", language)).font(.ink(17, relativeTo: .subheadline)).padding(.top, 8)
+                        TextField(tr("NAS 的 ZeroTier IPv4 地址", language), text: $draft.gateway).keyboardType(.decimalPad)
+                        Text(tr("NAS 检测端口", language)).font(.ink(17, relativeTo: .subheadline)).padding(.top, 8)
+                        TextField(tr("NAS 检测端口", language), text: $draft.port).keyboardType(.numberPad)
+                    }.disabled(vpn.active)
                     NavigationLink {
                         MoonManagerView(text: $draft.moons, vpn: vpn)
                     } label: {
-                        LabeledContent(tr("Moon 辅助节点", language), value: "\((try? MoonEntry.parse(draft.moons).count) ?? 0)")
-                    }
-                } footer: { Text(tr("Moon 帮助节点发现，不自动成为 NAS 出口。", language)) }
-                Section {
+                        HStack {
+                            Text(tr("Moon 辅助节点", language)); Spacer()
+                            Text("\((try? MoonEntry.parse(draft.moons).count) ?? 0)")
+                            Image(systemName: "chevron.right")
+                        }.padding(18).stickerSurface(Color(red: 1, green: 0.993, blue: 0.965))
+                    }.buttonStyle(.plain)
                     Toggle(tr("开发者模式", language), isOn: $developer)
                         .onChange(of: developer) { _, enabled in if !enabled { vpn.snapshot.removeValue(forKey: "peers") } }
-                } footer: { Text(tr("显示设备身份、节点路径与诊断工具。", language)) }
-                Section {
-                    Text(tr("连接后 IPv4 流量和 DNS 经过 NAS，当前不转发 IPv6。首次出口检测持续失败会自动断开。", language))
-                    Text("GPL-3.0-or-later · ZeroTier core MPL-2.0")
-                }
-                if let error { Section { Text(tr(error, language)).foregroundStyle(.red) } }
+                        .padding(18).stickerSurface(Color(red: 1, green: 0.993, blue: 0.965))
+                    DisclosureGroup(tr("连接指南", language)) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(tr("1. NAS 加入同一 ZeroTier 网络，并启用 mihomo 网关。", language))
+                            Text(tr("2. 扫码或填写网络 ID、NAS 虚拟 IPv4 和检测端口。", language))
+                            Text(tr("3. 允许系统 VPN 配置，并在 ZeroTier 管理端授权此设备。", language))
+                            Text(tr("二维码只填入设置；不会自动连接，也不替代 Controller 授权。", language))
+                            Text(tr("Moon 帮助节点发现，不自动成为 NAS 出口。", language))
+                        }.font(.subheadline).padding(.top, 12)
+                    }.padding(18).stickerSurface(Color(red: 1, green: 0.993, blue: 0.965))
+                    Text(tr("连接后 IPv4 流量和 DNS 经过 NAS，当前不转发 IPv6。首次出口检测持续失败会自动断开。", language)).font(.footnote).foregroundStyle(.secondary)
+                    Text("NestLink 0.7.0 · GPL-3.0-or-later").font(.footnote).foregroundStyle(.secondary)
+                    if let error { Text(tr(error, language)).foregroundStyle(.red) }
+                }.padding(22).frame(maxWidth: 680).frame(maxWidth: .infinity)
             }
+            .scrollContentBackground(.hidden).background(nestCream).buttonStyle(SketchSettingsButtonStyle()).textFieldStyle(SketchFieldStyle())
             .textInputAutocapitalization(.never).autocorrectionDisabled()
             .navigationTitle(tr("连接设置", language)).navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -132,7 +149,8 @@ struct MoonManagerView: View {
             footer: { Text(tr("最多 8 个节点。完整 World 与自定义 Seed 可在开发者模式中配置。", language)) }
             .disabled(vpn.active)
             if let error { Section { Text(tr(error, language)).foregroundStyle(.red) } }
-        }.navigationTitle(tr("Moon 辅助节点", language))
+        }.scrollContentBackground(.hidden).background(nestCream).buttonStyle(SketchSettingsButtonStyle()).textFieldStyle(SketchFieldStyle()).navigationTitle(tr("Moon 辅助节点", language))
+            .scrollContentBackground(.hidden).background(nestCream).buttonStyle(SketchSettingsButtonStyle()).textFieldStyle(SketchFieldStyle())
             .textInputAutocapitalization(.never).autocorrectionDisabled()
     }
 }

@@ -20,11 +20,11 @@ struct ScanJoinView: View {
         NavigationStack {
             VStack(spacing: 20) {
                 CameraScanner(language: language, onCode: accept)
-                    .frame(maxHeight: 420).clipShape(RoundedRectangle(cornerRadius: 22))
+                    .frame(maxHeight: 420).clipShape(RoundedRectangle(cornerRadius: 12))
                 Text(tr("将入网二维码放入相机画面，或从图片识别。", language)).multilineTextAlignment(.center)
                 PhotosPicker(selection: $photo, matching: .images) {
                     Label(tr("从图片识别", language), systemImage: "photo")
-                }.buttonStyle(.bordered).disabled(processing)
+                }.buttonStyle(SketchSettingsButtonStyle()).disabled(processing)
                 if processing { ProgressView() }
                 if let error { Text(tr(error, language)).foregroundStyle(.red).font(.callout) }
                 Text(tr("识别在设备本地完成，不上传图片。拒绝相机权限仍可从图片识别。", language)).font(.footnote).foregroundStyle(.secondary)
