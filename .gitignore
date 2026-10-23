@@ -15,3 +15,4 @@ ios/NestLink.xcodeproj/
 ios/build-simulator/
 ios/Signing.local.xcconfig
 **/xcuserdata/
+ios/build-home-check/

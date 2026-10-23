@@ -1,0 +1,10 @@
+{
+  "upstream": "https://github.com/heiher/hev-socks5-tunnel",
+  "commits": {
+    ".": "9b2c2320b26046b307abd6ddb5f102b2ccd1d4a4",
+    "src/core": "ef82008f7e2058e56d76a79543a585bba4b7feef",
+    "third-part/hev-task-system": "935f3c14d2d2035d5b1d16ef0d426a6a0fd34572",
+    "third-part/lwip": "e6d5fc6cdc7c2ab379ffffd13dfdc99fb826a86c",
+    "third-part/yaml": "94441ec8777eb319936735a58b376963d09c73d4"
+  }
+}

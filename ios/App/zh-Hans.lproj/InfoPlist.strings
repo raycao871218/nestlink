@@ -1,2 +1,4 @@
 "CFBundleDisplayName" = "窝窝连";
 "NSCameraUsageDescription" = "在设备本地扫描 ZeroTier 入网码，用于填入连接设置。";
+"NSLocationWhenInUseUsageDescription" = "仅用于读取当前 Wi-Fi 名称并填写家庭网络设置；不会持续定位或上传位置。";
+"NSLocalNetworkUsageDescription" = "通过 Wi-Fi 检查家庭 NAS 是否可达，不经过 ZeroTier。";

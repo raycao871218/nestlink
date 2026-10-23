@@ -10,6 +10,25 @@ final class VPNController: ObservableObject {
     @Published var snapshot: [String: Any] = [:]
     @Published var error: String?
     @Published var busy = true
+    @Published private(set) var automaticEnabled = false
+    var serviceEnabled: Bool { active || automaticEnabled }
+    var homeReady: Bool { verified && snapshot["transport"] as? String == "home" }
+    var connectionVerified: Bool { verified }
+    func ready(_ key: String) -> Bool { fresh && snapshot[key] as? Bool == true }
+    func setForeground(_ value: Bool) {
+        if value, !busy, let manager {
+            busy = true
+            Task {
+                defer { busy = false }
+                do {
+                    try await manager.loadFromPreferences()
+                    guard self.manager === manager else { return }
+                    automaticEnabled = manager.isOnDemandEnabled
+                    statusChanged()
+                } catch { self.error = "读取 VPN 配置失败：\(error.localizedDescription)" }
+            }
+        }
+    }
     private var manager: NETunnelProviderManager?
     private var observer: NSObjectProtocol?
     private var polling: Task<Void, Never>?
@@ -27,6 +46,10 @@ final class VPNController: ObservableObject {
     var verified: Bool { fresh && snapshot["phase"] as? String == "connected" }
     var title: String {
         if busy { return "正在准备" }
+        if homeReady { return "家庭直连" }
+        if automaticEnabled && !active {
+            return "自动切换已开启"
+        }
         switch status {
         case .connecting: return snapshot["phase"] as? String == "authorization" ? "等待设备授权" : "正在连接"
         case .connected: return verified ? "已连接" : "正在确认连接"
@@ -49,7 +72,14 @@ final class VPNController: ObservableObject {
                 self.statusChanged()
             }
         }
-        Task { await load() }
+        Task {
+            await load()
+            #if DEBUG
+            // Explicit developer-only live validation, never persisted.
+            if ProcessInfo.processInfo.environment["NESTLINK_TEST_CONNECTION"] == "connect" { connect() }
+            if ProcessInfo.processInfo.environment["NESTLINK_TEST_CONNECTION"] == "disconnect" { disconnect() }
+            #endif
+        }
         polling = Task { [weak self] in
             while !Task.isCancelled {
                 self?.refreshSnapshot()
@@ -77,11 +107,12 @@ final class VPNController: ObservableObject {
                 UserDefaults.standard.set(supplied.dictionary, forKey: "connection")
             }
             #endif
+            automaticEnabled = manager?.isOnDemandEnabled ?? false
             statusChanged()
         } catch { self.error = "读取 VPN 配置失败：\(error.localizedDescription)" }
     }
     func connect() {
-        guard !busy, !active else { return }
+        guard !busy, !serviceEnabled else { return }
         do { try settings.validate() } catch { self.error = error.localizedDescription; return }
         busy = true; error = nil; snapshot = [:]; lastSnapshot = nil
         let config = settings.dictionary
@@ -100,24 +131,48 @@ final class VPNController: ObservableObject {
                 // here also blocks ordinary traffic during joining and reconnecting.
                 tunnel.includeAllNetworks = false
                 manager.protocolConfiguration = tunnel
+                manager.onDemandRules = try OnDemandPolicy.rules(for: self.settings.home)
+                manager.isOnDemandEnabled = self.settings.home.enabled
                 manager.localizedDescription = "NestLink · 窝窝连"
                 manager.isEnabled = true
                 try await manager.saveToPreferences()
                 try await manager.loadFromPreferences()
                 self.manager = manager
+                automaticEnabled = manager.isOnDemandEnabled
+                // The provider selects the home proxy or ZeroTier transport.
                 try manager.connection.startVPNTunnel()
                 statusChanged()
             } catch { self.error = "启动失败：\(error.localizedDescription)" }
         }
     }
-    func disconnect() { manager?.connection.stopVPNTunnel(); snapshot = [:]; lastSnapshot = nil; statusChanged() }
+    func disconnect() {
+        guard !busy else { return }
+        guard automaticEnabled, let manager else {
+            manager?.connection.stopVPNTunnel(); snapshot = [:]; lastSnapshot = nil; statusChanged(); return
+        }
+        busy = true; error = nil
+        Task {
+            defer { busy = false }
+            do {
+                // Persist the pause before stopping, or On Demand can restart the VPN.
+                manager.isOnDemandEnabled = false
+                try await manager.saveToPreferences()
+                automaticEnabled = false
+                manager.connection.stopVPNTunnel()
+                snapshot = [:]; lastSnapshot = nil; statusChanged()
+            } catch {
+                manager.isOnDemandEnabled = true
+                self.error = "无法暂停自动切换，请重试或在系统 VPN 设置中关闭按需连接。"
+            }
+        }
+    }
     private func statusChanged() {
         status = manager?.connection.status ?? .invalid
         if !active {
             requestID = nil; snapshot = [:]; lastSnapshot = nil
             manager?.connection.fetchLastDisconnectError { [weak self] error in
                 Task { @MainActor in
-                    if let error, self?.active == false { self?.error = error.localizedDescription; self?.writeDebugStatus() }
+                    if let error, self?.active == false, self?.homeReady != true { self?.error = error.localizedDescription; self?.writeDebugStatus() }
                 }
             }
         } else { refreshSnapshot() }
@@ -136,6 +191,7 @@ final class VPNController: ObservableObject {
                     self.requestID = nil
                     if let data, let result = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                         self.snapshot = result; self.lastSnapshot = Date()
+                        if result["phase"] as? String == "connected" { self.error = nil }
                         if let network = result["networkId"] as? String, network.lowercased() == self.settings.network.lowercased(),
                            let name = result["networkName"] as? String, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                             UserDefaults.standard.set(name.trimmingCharacters(in: .whitespacesAndNewlines), forKey: "network_name_" + network.lowercased())

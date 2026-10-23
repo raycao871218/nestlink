@@ -14,89 +14,110 @@ struct SettingsView: View {
     @State private var pending: QRPayload?
     @State private var scanned: QRPayload?
     @State private var loaded = false
-    @State private var choosingLanguage = false
     @State private var applyAfterDisconnect: QRPayload?
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    HStack {
-                        Text(tr("语言", language)).font(.ink(20, relativeTo: .headline))
-                        Spacer()
-                        Button { choosingLanguage = true } label: {
-                            Text(language == "zh" ? "简体中文  ⌄" : "English  ⌄").padding(10).stickerSurface(sketchAccent)
-                        }
-                    }.padding(14).stickerSurface(Color(red: 1, green: 0.993, blue: 0.965))
-                    HStack(spacing: 12) {
-                        Button { scanning = true } label: {
-                            Label(tr("扫码入网", language), systemImage: "qrcode.viewfinder").frame(maxWidth: .infinity)
-                        }
-                        Button {
-                            do { code = try QRPayload.encode(draft); showingCode = true }
-                            catch { self.error = error.localizedDescription }
-                        } label: { Label(tr("显示入网码", language), systemImage: "qrcode").frame(maxWidth: .infinity) }
-                    }
-                    VStack(alignment: .leading, spacing: 8) {
-                        let networkName = UserDefaults.standard.string(forKey: "network_name_" + draft.network.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) ?? ""
-                        Text(tr("16 位 ZeroTier 网络 ID", language) + (networkName.isEmpty ? "" : " · " + networkName)).font(.ink(17, relativeTo: .subheadline))
+            Form {
+                Section {
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text(tr("语言", language)).font(.headline)
+                        Picker("Language / 语言", selection: $language) {
+                            Text("English").tag("en")
+                            Text("简体中文").tag("zh")
+                        }.pickerStyle(.segmented).accessibilityIdentifier("settings.language")
+                    }.padding(.vertical, 8)
+                }
+                Section {
+                    LabeledContent {
                         TextField(tr("16 位 ZeroTier 网络 ID", language), text: $draft.network)
-                        Text(tr("NAS 虚拟 IPv4", language)).font(.ink(17, relativeTo: .subheadline)).padding(.top, 8)
-                        TextField(tr("NAS 的 ZeroTier IPv4 地址", language), text: $draft.gateway).keyboardType(.decimalPad)
-                        Text(tr("NAS 检测端口", language)).font(.ink(17, relativeTo: .subheadline)).padding(.top, 8)
-                        TextField(tr("NAS 检测端口", language), text: $draft.port).keyboardType(.numberPad)
-                    }.disabled(vpn.active)
+                            .multilineTextAlignment(.trailing).disabled(vpn.serviceEnabled).accessibilityIdentifier("settings.network")
+                    } label: { Text(tr("ZeroTier 网络", language)) }
+                    LabeledContent {
+                        TextField(tr("NAS 的 ZeroTier IPv4 地址", language), text: $draft.gateway)
+                            .keyboardType(.decimalPad).multilineTextAlignment(.trailing).disabled(vpn.serviceEnabled).accessibilityIdentifier("settings.gateway")
+                    } label: { Text(tr("NAS 虚拟 IPv4", language)) }
+                    LabeledContent {
+                        TextField(tr("NAS 检测端口", language), text: $draft.port)
+                            .keyboardType(.numberPad).multilineTextAlignment(.trailing).disabled(vpn.serviceEnabled).accessibilityIdentifier("settings.port")
+                    } label: { Text(tr("NAS 检测端口", language)) }
                     NavigationLink {
                         MoonManagerView(text: $draft.moons, vpn: vpn)
                     } label: {
-                        HStack {
-                            Text(tr("Moon 辅助节点", language)); Spacer()
-                            Text("\((try? MoonEntry.parse(draft.moons).count) ?? 0)")
-                            Image(systemName: "chevron.right")
-                        }.padding(18).stickerSurface(Color(red: 1, green: 0.993, blue: 0.965))
-                    }.buttonStyle(.plain)
+                        LabeledContent(tr("Moon 辅助节点", language), value: "\((try? MoonEntry.parse(draft.moons).count) ?? 0)")
+                    }.accessibilityIdentifier("settings.moons")
+                } header: { Text(tr("连接配置", language)) }
+                footer: {
+                    if vpn.serviceEnabled { Text(tr("暂停连接和自动切换后可编辑设置。", language)) }
+                }
+                Section {
+                    NavigationLink {
+                        HomeRoutingSettingsView(home: $draft.home, vpn: vpn)
+                    } label: {
+                        LabeledContent(tr("在家与外出", language), value: tr(draft.home.enabled ? "自动切换" : "手动连接", language))
+                    }.accessibilityIdentifier("settings.homeRouting")
+                }
+                Section(tr("入网二维码", language)) {
+                    Button { scanning = true } label: { Label(tr("扫码入网", language), systemImage: "qrcode.viewfinder") }
+                    Button {
+                        do { code = try QRPayload.encode(draft); showingCode = true }
+                        catch { self.error = error.localizedDescription }
+                    } label: { Label(tr("显示入网码", language), systemImage: "qrcode") }
+                }
+                Section {
                     Toggle(tr("开发者模式", language), isOn: $developer)
                         .onChange(of: developer) { _, enabled in if !enabled { vpn.snapshot.removeValue(forKey: "peers") } }
-                        .padding(18).stickerSurface(Color(red: 1, green: 0.993, blue: 0.965))
+                    if developer {
+                        Text(tr("开发者工具可从首页右上角打开。", language)).font(.footnote).foregroundStyle(.secondary)
+                    }
+                }
+                Section {
                     DisclosureGroup(tr("连接指南", language)) {
-                        VStack(alignment: .leading, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 14) {
                             Text(tr("1. NAS 加入同一 ZeroTier 网络，并启用 mihomo 网关。", language))
                             Text(tr("2. 扫码或填写网络 ID、NAS 虚拟 IPv4 和检测端口。", language))
                             Text(tr("3. 允许系统 VPN 配置，并在 ZeroTier 管理端授权此设备。", language))
                             Text(tr("二维码只填入设置；不会自动连接，也不替代 Controller 授权。", language))
                             Text(tr("Moon 帮助节点发现，不自动成为 NAS 出口。", language))
-                        }.font(.subheadline).padding(.top, 12)
-                    }.padding(18).stickerSurface(Color(red: 1, green: 0.993, blue: 0.965))
-                    Text(tr("连接后 IPv4 流量和 DNS 经过 NAS，当前不转发 IPv6。首次出口检测持续失败会自动断开。", language)).font(.footnote).foregroundStyle(.secondary)
-                    Text("NestLink 0.7.5 · GPL-3.0-or-later").font(.footnote).foregroundStyle(.secondary)
-                    if let error { Text(tr(error, language)).foregroundStyle(.red) }
-                }.padding(22).frame(maxWidth: 680).frame(maxWidth: .infinity)
+                        }.font(.callout).padding(.vertical, 12)
+                    }.accessibilityIdentifier("settings.guide")
+                } footer: {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(tr("连接后 IPv4 流量和 DNS 经过 NAS，当前不转发 IPv6。首次出口检测持续失败会自动断开。", language))
+                        Text("NestLink " + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "") + " · GPL-3.0-or-later")
+                    }.padding(.top, 8)
+                }
             }
-            .scrollContentBackground(.hidden).background(nestCream).buttonStyle(SketchSettingsButtonStyle()).textFieldStyle(SketchFieldStyle())
+            .formStyle(.grouped).scrollContentBackground(.hidden).background(nestCream)
+            .scrollDismissesKeyboard(.immediately)
+            .font(.body).foregroundStyle(sketchInk)
             .textInputAutocapitalization(.never).autocorrectionDisabled()
             .navigationTitle(tr("连接设置", language)).navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button(tr("取消", language)) { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button(tr("取消", language)) { dismiss() }.accessibilityIdentifier("settings.cancel") }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(tr("保存", language)) {
                         do {
                             try draft.validate(); draft.moons = try MoonEntry.canonical(draft.moons); vpn.settings = draft
                             UserDefaults.standard.set(draft.dictionary, forKey: "connection"); dismiss()
                         } catch { self.error = error.localizedDescription }
-                    }.disabled(vpn.active)
+                    }.disabled(vpn.serviceEnabled).accessibilityIdentifier("settings.save")
                 }
             }
             .onAppear { if !loaded { draft = vpn.settings; loaded = true } }
             .sheet(isPresented: $scanning, onDismiss: { pending = scanned; scanned = nil }) {
                 ScanJoinView(language: language) { payload in scanned = payload; scanning = false }
             }
-            .onChange(of: vpn.active) { _, active in
+            .onChange(of: vpn.serviceEnabled) { _, active in
                 if !active, let payload = applyAfterDisconnect { draft = payload.applying(to: draft); applyAfterDisconnect = nil }
             }
             .sheet(isPresented: $showingCode) { JoinCodeView(payload: code, language: language) }
+            .alert(tr("检查连接设置", language), isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
+                Button(tr("关闭", language), role: .cancel) { error = nil }
+            } message: { Text(tr(error ?? "", language)) }
             .alert(tr("确认入网信息", language), isPresented: Binding(get: { pending != nil }, set: { if !$0 { pending = nil } })) {
-                Button(tr(vpn.active ? "断开并填入设置" : "填入设置", language)) {
+                Button(tr(vpn.serviceEnabled ? "断开并填入设置" : "填入设置", language)) {
                     if let pending {
-                        if vpn.active { applyAfterDisconnect = pending; vpn.disconnect() }
+                        if vpn.serviceEnabled { applyAfterDisconnect = pending; vpn.disconnect() }
                         else { draft = pending.applying(to: draft) }
                     }
                     pending = nil
@@ -108,26 +129,6 @@ struct SettingsView: View {
                 }
             }
         }.tint(nestForest)
-        .overlay {
-            if choosingLanguage {
-                ZStack {
-                    Color.black.opacity(0.3).ignoresSafeArea().onTapGesture { choosingLanguage = false }
-                    VStack(spacing: 16) {
-                        Text("Language / 语言").font(.system(size: 23, weight: .semibold))
-                        ForEach(["en", "zh"], id: \.self) { value in
-                            Button {
-                                language = value; choosingLanguage = false
-                            } label: {
-                                Text((value == "en" ? "English" : "简体中文") + (language == value ? "  ·" : ""))
-                                    .font(.system(size: 20)).frame(maxWidth: .infinity).padding(16)
-                                    .stickerSurface(language == value ? sketchAccent : nestCream)
-                            }.accessibilityAddTraits(language == value ? .isSelected : [])
-                        }
-                        Button(tr("取消", language)) { choosingLanguage = false }.padding(10)
-                    }.padding(24).frame(maxWidth: 360).stickerSurface(nestCream).padding(20).foregroundStyle(sketchInk)
-                }.accessibilityAddTraits(.isModal)
-            }
-        }
     }
 }
 
@@ -164,7 +165,7 @@ struct MoonManagerView: View {
                         Spacer()
                         Button(role: .destructive) { text = entries.filter { $0.id != entry.id }.map(\.line).joined(separator: "\n") } label: {
                             Label(tr("移除", language), systemImage: "trash").labelStyle(.iconOnly)
-                        }.disabled(vpn.active)
+                        }.disabled(vpn.serviceEnabled)
                     }
                 }
             }
@@ -179,10 +180,10 @@ struct MoonManagerView: View {
                 }.disabled(world.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             } header: { Text(tr("添加 Moon", language)) }
             footer: { Text(tr("最多 8 个节点。完整 World 与自定义 Seed 可在开发者模式中配置。", language)) }
-            .disabled(vpn.active)
+            .disabled(vpn.serviceEnabled)
             if let error { Section { Text(tr(error, language)).foregroundStyle(.red) } }
-        }.scrollContentBackground(.hidden).background(nestCream).buttonStyle(SketchSettingsButtonStyle()).textFieldStyle(SketchFieldStyle()).navigationTitle(tr("Moon 辅助节点", language))
-            .scrollContentBackground(.hidden).background(nestCream).buttonStyle(SketchSettingsButtonStyle()).textFieldStyle(SketchFieldStyle())
+        }.scrollContentBackground(.hidden).background(nestCream).font(.body).navigationTitle(tr("Moon 辅助节点", language))
+            .scrollDismissesKeyboard(.immediately)
             .textInputAutocapitalization(.never).autocorrectionDisabled()
     }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import ImageIO
+import NetworkExtension
 
 @main
 struct SettingsTests {
@@ -24,6 +25,40 @@ struct SettingsTests {
         assert(parsed.count == 1 && parsed[0]["seed"] == "abcdef0123")
         rejected(ConnectionSettings(network: valid.network, gateway: valid.gateway, moons: (1...9).map { String($0, radix: 16) }.joined(separator: "\n")))
         print("Connection validation, config round-trip, Moon limits and conflicts: PASS")
+        let legacy = ConnectionSettings(dictionary: ["network": valid.network, "gateway": valid.gateway])
+        assert(!legacy.home.enabled && !legacy.home.routerConfigured)
+        var home = HomeNetworkSettings()
+        home.enabled = true; home.ssid = "My Home WiFi"; home.nas = "192.168.1.66"; home.routerConfigured = true
+        try home.validate()
+        var withHome = valid; withHome.home = home
+        assert(ConnectionSettings(dictionary: withHome.dictionary) == withHome)
+        let disabledRules = try OnDemandPolicy.rules(for: HomeNetworkSettings())
+        assert(disabledRules.isEmpty)
+        let rules = try OnDemandPolicy.rules(for: home)
+        assert(rules.count == 2)
+        assert(rules[0] is NEOnDemandRuleConnect && rules[0].interfaceTypeMatch == .wiFi)
+        assert(rules[0].ssidMatch == ["My Home WiFi"])
+        assert(rules[1] is NEOnDemandRuleConnect && rules[1].interfaceTypeMatch == .any && rules[1].ssidMatch == nil)
+        var invalidHome = withHome
+        invalidHome.home.routerConfigured = false; try invalidHome.validate()
+        invalidHome = withHome; invalidHome.home.ssid = ""; rejected(invalidHome)
+        invalidHome = withHome; invalidHome.home.ssid = String(repeating: "家", count: 11); rejected(invalidHome)
+        invalidHome = withHome; invalidHome.home.ssid = "home\nother"; rejected(invalidHome)
+        invalidHome = withHome; invalidHome.home.nas = "8.8.8.8"; rejected(invalidHome)
+        invalidHome = withHome; invalidHome.home.nas = "127.0.0.1"; rejected(invalidHome)
+        invalidHome = withHome; invalidHome.home.port = "0"; rejected(invalidHome)
+        for ip in ["10.0.0.1", "172.16.0.1", "172.31.255.254", "192.168.1.66"] { assert(HomeNetworkSettings.isPrivateIPv4(ip)) }
+        for ip in ["172.15.0.1", "172.32.0.1", "192.169.1.1", "169.254.1.2", "::1", "999.1.2.3"] { assert(!HomeNetworkSettings.isPrivateIPv4(ip)) }
+        assert(HomeNetworkSettings.sameSubnet("192.168.1.66", address: "192.168.1.10", mask: "255.255.255.0"))
+        assert(!HomeNetworkSettings.sameSubnet("10.12.0.66", address: "192.168.1.10", mask: "255.255.255.0"))
+        assert(!HomeNetworkSettings.sameSubnet("192.168.1.10", address: "192.168.1.10", mask: "255.255.255.0"))
+        assert(!HomeNetworkSettings.sameSubnet("192.168.1.66", address: "192.168.1.10", mask: "0.0.0.0"))
+        let imported = try QRPayload.parse(valid.network).applying(to: withHome)
+        assert(imported.home == home)
+        let shared = try QRPayload.encode(withHome)
+        assert(!shared.contains("My%20Home") && !shared.contains("192.168.1.66"))
+        print("Home settings migration, no manual router setup, exact SSID rule order, local subnet checks and QR isolation: PASS")
+
         for text in [valid.network, "zerotier://\(valid.network)", "zerotier://network/\(valid.network)",
                      "https://my.zerotier.com/network/\(valid.network)", "https://central.zerotier.com/networks/\(valid.network)/"] {
             let decoded = try QRPayload.parse(text)

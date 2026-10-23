@@ -1,2 +1,4 @@
 "CFBundleDisplayName" = "NestLink";
 "NSCameraUsageDescription" = "Scan a ZeroTier join code locally to fill in connection settings.";
+"NSLocationWhenInUseUsageDescription" = "Allow precise location only to read the current Wi-Fi name and fill your home network settings. Your location is not tracked or uploaded.";
+"NSLocalNetworkUsageDescription" = "Check that your home NAS is reachable over Wi-Fi, without using ZeroTier.";

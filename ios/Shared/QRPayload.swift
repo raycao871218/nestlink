@@ -59,8 +59,10 @@ struct QRPayload {
         return QRPayload(network: id, gateway: fields["gateway"], port: port, moons: moons)
     }
     func applying(to original: ConnectionSettings) -> ConnectionSettings {
-        ConnectionSettings(network: network, gateway: gateway ?? original.gateway,
-                           port: port.map(String.init) ?? original.port, moons: moons ?? original.moons)
+        var result = original
+        result.network = network; result.gateway = gateway ?? original.gateway
+        result.port = port.map(String.init) ?? original.port; result.moons = moons ?? original.moons
+        return result
     }
     static func encode(_ settings: ConnectionSettings) throws -> String {
         try settings.validate()

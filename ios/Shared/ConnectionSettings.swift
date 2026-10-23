@@ -7,11 +7,12 @@ struct ConnectionSettings: Equatable {
     var gateway = ""
     var port = "7890"
     var moons = ""
+    var home = HomeNetworkSettings()
 
     var dictionary: [String: Any] {
         ["network": network.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
          "gateway": gateway.trimmingCharacters(in: .whitespacesAndNewlines),
-         "port": Int(port) ?? 0, "moons": moons]
+         "port": Int(port) ?? 0, "moons": moons, "home": home.dictionary]
     }
 
     init(network: String = "", gateway: String = "", port: String = "7890", moons: String = "") {
@@ -22,6 +23,7 @@ struct ConnectionSettings: Equatable {
         gateway = dictionary["gateway"] as? String ?? ""
         port = String(dictionary["port"] as? Int ?? 7890)
         moons = dictionary["moons"] as? String ?? ""
+        home = HomeNetworkSettings(dictionary: dictionary["home"] as? [String: Any] ?? [:])
     }
     func validate() throws {
         let id = network.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -40,6 +42,7 @@ struct ConnectionSettings: Equatable {
             throw SettingsError.message("NAS 检测端口必须在 1–65535 之间")
         }
         _ = try parsedMoons()
+        try home.validate()
     }
     func parsedMoons() throws -> [[String: String]] {
         var entries: [UInt64: UInt64] = [:]

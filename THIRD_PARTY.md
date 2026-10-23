@@ -32,3 +32,7 @@ The complete ZXing Apache-2.0 license is bundled in app/src/main/assets/licenses
 ## ZCOOL KuaiLe font
 
 Unmodified ZCOOL KuaiLe Regular from Google Fonts, Copyright 2018 The ZCOOL KuaiLe Project Authors, under SIL Open Font License 1.1. Source: https://github.com/googlefonts/zcool-kuaile . License is bundled in Android assets/licenses and iOS Fonts/OFL.txt.
+
+## iPad local SOCKS5 forwarding
+
+HevSocks5Tunnel and its pinned SOCKS5 core, task system, lwIP and libyaml dependencies are included as source in `vendor/hev-socks5-tunnel`. Commit hashes are recorded in `SOURCE.json`; upstream is https://github.com/heiher/hev-socks5-tunnel. The MIT, BSD and other upstream license notices are retained alongside each component and bundled in the iPad app. The local packet bridge uses public NetworkExtension packet APIs.

@@ -8,14 +8,24 @@
 - 连接、取消、断开，显示公开设备 ID、虚拟 IPv4 与 UDP 收发计数。
 - `/0` IPv4 路由及 NAS DNS；IPv6 路由进入隧道后丢弃，不转发 IPv6。
 - 经 Packet Tunnel 虚拟接口执行 NAS TCP 检测，以及使用系统 TLS 验证的 HTTPS 204 检测。两项通过才显示已连接。
-- 每 20 秒检测，路径变化使旧结果失效；扩展检测结果超过 45 秒停止显示成功，应用超过 8 秒收不到快照停止显示成功。
+- ZeroTier 隧道每 20 秒检测，路径变化使旧结果失效；扩展检测结果超过 45 秒停止显示成功，应用超过 8 秒收不到快照停止显示成功。
 - SwiftUI 支持 iPad 横竖屏和紧凑宽度；默认英语，可切换简体中文，切换保留连接和设置草稿。
 - 默认用户模式；开发者模式显示设备、虚拟地址、UDP 计数、节点物理路径，并提供手动复检。
 - Moon 列表添加／删除、数量摘要和实时状态；仅 Moon 角色且当前网络下有最近 120 秒内真实回包才显示正常。
 - 相机扫码与本地图片识别；确认后填入设置，不自动连接。支持与 Android 相同的网络 ID、ZeroTier 链接、官方管理页链接和 harborlink://join 格式。
 - 生成入网码、分享入网信息；仅包含网络、NAS、端口与 Moon 参数，不包含身份私钥或管理 Token。
 
-当前仍是开发原型，不是发行版。功能对照与未完成的验收见 [Android 对齐清单](ANDROID_PARITY.md)。自动启动、按需连接和系统级断线保护均未实现，也不是当前 Android 版已有的能力。
+当前仍是开发原型，不是发行版。功能对照与未完成的验收见 [Android 对齐清单](ANDROID_PARITY.md)。iPad 新增可选的家庭 Wi-Fi 按需切换；仍不提供系统级断线保护或独立的开机连接开关。此功能不代表 Android 版已实现。
+
+## 在家直连 NAS，外出使用 ZeroTier（Build 15）
+
+1. 在 **连接设置 → 在家与外出** 启用自动切换，填写家庭 Wi-Fi 名称、NAS 局域网 IPv4 和 SOCKS5／混合代理端口。可用“读取当前网络”填写 Wi-Fi 名称；名称不可读时单独授权或手动填写一次。
+2. 保存后点首页 **开启自动切换**。家庭 SSID 匹配时，Packet Tunnel 直接连接 NAS SOCKS5 代理，不创建 ZeroTier 引擎；其他网络继续使用原 ZeroTier 引擎。系统 VPN 图标在两种通路都保留。
+3. 无需固定 iPad 的 IP、配置 DHCP 保留，或修改 Wi-Fi 网关/DNS。NAS 无需增加局域网透明网关规则，只需现有代理端口允许 LAN 访问。
+4. 两种通路都在 VPN 内检测 NAS 和 Google HTTPS 204；不能用普通 Wi-Fi 的网站可达性代替代理检测。DNS 的 UDP 请求也经过 NAS SOCKS5，IPv6 与原通路一致进入隧道后丢弃。
+5. 暂停自动切换会先关闭系统按需连接，再停止 VPN。保存参数不会自行连接。网络切换由扩展中的路径监控选择通路，应用退到后台后仍由系统维护隧道；SSID 不可读／不匹配时使用 ZeroTier。
+
+本机已完成家庭代理与原 ZeroTier 两条通路的 iPad 真机 NAS／HTTPS 检查、家庭代理断开重连及设置草稿测试。实际离家跨 Wi-Fi/蜂窝切换、长时间锁屏和节电幅度仍需实测。家庭 Wi-Fi 参数只保存在本机，不随入网码分享。
 
 ## 构建与签名
 
@@ -28,7 +38,7 @@ xcodegen generate --spec ios/project.yml
 open ios/NestLink.xcodeproj
 ```
 
-在 Xcode 中为 `NestLink` 和 `PacketTunnel` 两个 Target 都选择正确 Team，保持自动签名，并确认 Network Extensions / Packet Tunnel 能力启用。如果 Bundle ID 被其他 Team 占用，同时更改主应用及扩展 ID；扩展 ID 应为主应用 ID 加 `.PacketTunnel`。
+在 Xcode 中为 `NestLink` 和 `PacketTunnel` 两个 Target 都选择正确 Team，保持自动签名，并确认 Network Extensions / Packet Tunnel 和 Access Wi-Fi Information 能力启用。如果 Bundle ID 被其他 Team 占用，同时更改主应用及扩展 ID；扩展 ID 应为主应用 ID 加 `.PacketTunnel`。
 
 生成的 `.xcodeproj` 不纳入版本管理，`project.yml` 是工程配置来源。重新生成会覆盖工程内的手工修改，团队设置可通过构建参数提供：
 

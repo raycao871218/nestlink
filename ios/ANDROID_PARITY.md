@@ -1,5 +1,8 @@
 # 对齐 Android 0.6.0
 
+Build 15 补充：iPad 已实现家庭 Wi-Fi 下的本地 VPN → NAS SOCKS5 通路，不启动 ZeroTier；外出使用原 ZeroTier 通路。两条通路的真机 NAS／HTTPS 检测通过。实际跨网络自动切换和锁屏验收仍待完成；下表为早期 Android 对齐记录。
+
+
 以仓库当前 Android 实现为基准；“实现”不等于已通过真机验收。
 
 | 范围 | Android | iPad Build 4 |
@@ -29,4 +32,4 @@
 
 ## 双端当前共同不支持
 
-多个并行网络、IPv6 转发、自动开机连接、按需连接及系统级 kill switch。不要将这些列作从 Android 遗漏的功能。
+多个并行网络、IPv6 转发、独立的自动开机连接开关及系统级 kill switch。不要将这些列作从 Android 遗漏的功能。iPad 新增可选的家庭 SSID 按需切换（在家关闭 ZeroTier，其他网络按需连接），尚待家庭网络真机验收；Android 未同步实现。
