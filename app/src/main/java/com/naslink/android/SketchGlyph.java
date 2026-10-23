@@ -14,6 +14,8 @@ final class SketchGlyph extends Drawable {
     @Override public int getIntrinsicHeight(){return size;}
     private void line(Canvas c,float x,float y,float xx,float yy){c.drawLine(x,y,xx,yy,p);}
     @Override public void draw(Canvas c) {
+        int art=ApprovedArt.glyphArt(kind);
+        if(art!=0){Paint image=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);image.setAlpha(alpha);ApprovedArt.fit(c,art,new RectF(getBounds()),android.view.Gravity.CENTER_HORIZONTAL,image);return;}
         c.save();c.translate(getBounds().left,getBounds().top);c.scale(getBounds().width()/32f,getBounds().height()/32f);
         p.setColor(0xff4c2718);p.setAlpha(alpha);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(2.3f);p.setStrokeCap(Paint.Cap.ROUND);p.setStrokeJoin(Paint.Join.ROUND);
         switch(kind) {

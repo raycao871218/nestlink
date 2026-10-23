@@ -7,5 +7,5 @@ image=Image.open(ROOT/'branding/nestlink-icon.png').convert('RGB')
 for density,size in [('mdpi',48),('hdpi',72),('xhdpi',96),('xxhdpi',144),('xxxhdpi',192)]:
     image.resize((size,size),Image.Resampling.LANCZOS).save(ROOT/f'app/src/main/res/mipmap-{density}/ic_launcher.png')
 for target,size in [('app/src/main/res/drawable-nodpi/chicken_badge.png',256),('app/src/main/res/drawable-nodpi/chicken_launcher.png',432),('ios/App/Assets.xcassets/ChickenBadge.imageset/chicken.png',256),('ios/App/Assets.xcassets/AppIcon.appiconset/AppIcon.png',1024)]:
-    image.resize((size,size),Image.Resampling.LANCZOS).save(ROOT/target)
+    (Image.open(ROOT/'app/src/main/res/drawable-nodpi/approved_chicken.png').convert('RGB') if 'badge' in target or 'ChickenBadge' in target else image).resize((size,size),Image.Resampling.LANCZOS).save(ROOT/target)
 print('Updated Android and iOS chicken icons')

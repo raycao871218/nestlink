@@ -57,3 +57,10 @@ No reboot endurance, battery soak, or universal site/protocol coverage is claime
 - Covered the existing PHP110 installation using adb install -r and confirmed version 0.7.0. Existing network and Moon configuration remained present; no data clearing or automatic VPN start was performed.
 - Inspected the enlarged 72dp chicken header, 34sp brand, 42sp heading, centered power action and compact handwritten settings on PHP110. No clipping was observed at its current font size; the guide remains collapsed until opened or attention is needed.
 - This UI release does not claim a new VPN connectivity, battery, reboot or large-font endurance test.
+
+## 0.7.1 approved-reference correction — 2026-10-23
+
+- Replaced approximate home artwork with mechanically extracted chicken, Chinese lettering, symbols and cleaned stretchable borders from `design/approved-home-reference.png`. Updated launcher icons to the same chicken.
+- Android versionCode 11, versionName 0.7.1. assembleDebug and lintDebug passed after final icon generation. Translation parity passed. Networking code is unchanged.
+- Native controls retain real state, accessibility text and large-font/English fallbacks. No success state is manufactured to match the connected reference.
+- Physical-device installation and screenshot verification are pending: adb and Windows USB enumeration currently report no phone despite reconnect attempts. This build has not yet been visually verified on the phone.

@@ -38,10 +38,8 @@ struct SketchUnderline: Shape {
 struct SketchPaper: View {
     var fill: Color = .white
     var body: some View {
-        SketchContour().fill(fill)
-            .overlay(SketchContour(drift: 2).stroke(sketchInk.opacity(0.05), lineWidth: 5).clipShape(SketchContour()))
-            .overlay(SketchContour().stroke(sketchInk, style: StrokeStyle(lineWidth: 2.1, lineCap: .round, lineJoin: .round)))
-            .overlay(SketchContour(drift: 1.8).stroke(sketchInk.opacity(0.55), style: StrokeStyle(lineWidth: 0.65, lineCap: .round, lineJoin: .round)))
+        Image(fill == sketchAccent ? "ApprovedButton" : "ApprovedPanel")
+            .resizable(capInsets: EdgeInsets(top: 14, leading: 14, bottom: 14, trailing: 14), resizingMode: .stretch)
             .allowsHitTesting(false)
     }
 }

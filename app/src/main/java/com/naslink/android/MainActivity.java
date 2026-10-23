@@ -39,6 +39,7 @@ public final class MainActivity extends Activity {
     @Override protected void attachBaseContext(Context base) {super.attachBaseContext(AppLanguage.wrap(base));}
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
+        ApprovedArt.initialize(getResources());
         inkTypeface=getResources().getFont(R.font.zcool_kuaile);
         if(saved!=null) {draftSettings=saved.getBundle("draftSettings");guideExpanded=saved.getBoolean("guideExpanded",false);}
         getWindow().setStatusBarColor(paper); getWindow().setNavigationBarColor(Build.VERSION.SDK_INT>=27?paper:ink);
@@ -48,31 +49,30 @@ public final class MainActivity extends Activity {
             try { port=Integer.parseInt(getPreferences(0).getString("port","7890")); } catch(NumberFormatException ignored) {}
             settings().edit().putInt("port",port).apply();
         }
-        ScrollView scroll=new ScrollView(this); scroll.setFillViewport(true); scroll.setBackgroundColor(paper);
-        LinearLayout root=column(); root.setPadding(dp(20),dp(14),dp(20),dp(24)); scroll.addView(root);
+        ScrollView scroll=new ScrollView(this); scroll.setFillViewport(true); scroll.setBackgroundColor(paper);scroll.setPadding(dp(16),dp(8),dp(16),dp(10));scroll.setClipToPadding(false);
+        LinearLayout root=column(); root.setPadding(dp(20),dp(14),dp(20),dp(18));root.setBackground(new SketchSurface(getResources().getDisplayMetrics().density,paper,"frame")); scroll.addView(root);
         LinearLayout header=new LinearLayout(this); header.setGravity(Gravity.CENTER_VERTICAL);
-        ImageView badge=new ImageView(this);badge.setImageResource(R.drawable.chicken_badge);badge.setScaleType(ImageView.ScaleType.FIT_CENTER);badge.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        LinearLayout.LayoutParams badgeLayout=new LinearLayout.LayoutParams(dp(72),dp(82));badgeLayout.rightMargin=dp(10);header.addView(badge,badgeLayout);
-        TextView brand=text(getString(R.string.app_name),34,ink); brand.setLetterSpacing(.01f); brand.setTypeface(inkTypeface);
-        header.addView(brand,new LinearLayout.LayoutParams(0,-2,1));
+        ImageView badge=new ImageView(this);badge.setImageResource(R.drawable.approved_chicken);badge.setScaleType(ImageView.ScaleType.FIT_CENTER);badge.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        LinearLayout.LayoutParams badgeLayout=new LinearLayout.LayoutParams(dp(74),dp(80));badgeLayout.rightMargin=dp(10);header.addView(badge,badgeLayout);
+        if("zh".equals(settings().getString("language","en"))) {
+            ImageView brand=new ImageView(this);brand.setImageResource(R.drawable.approved_brand);brand.setScaleType(ImageView.ScaleType.FIT_START);brand.setContentDescription(getString(R.string.app_name));
+            header.addView(brand,new LinearLayout.LayoutParams(0,dp(48),1));
+        } else {
+            TextView brand=text(getString(R.string.app_name),30,ink);header.addView(brand,new LinearLayout.LayoutParams(0,-2,1));
+        }
         Button settings=button("",paper,ink);settings.setContentDescription(getString(R.string.ui_001_settings));settings.setBackground(null);settings.setCompoundDrawablesWithIntrinsicBounds(glyph("gear",30),null,null,null);header.addView(settings,new LinearLayout.LayoutParams(dp(48),dp(48))); settings.setOnClickListener(v -> showSettings());
         add(root,header,0);
-        TextView headline=text(getString(R.string.ui_002_home_is_a_tap_away),42,ink); headline.setTypeface(inkTypeface);headline.setMaxLines(2); add(root,headline,18);
-        View underline=new View(this) {
-            final Paint pen=new Paint(Paint.ANTI_ALIAS_FLAG);
-            @Override protected void onDraw(Canvas canvas) {
-                pen.setColor(0xffffd34c);pen.setStyle(Paint.Style.STROKE);pen.setStrokeWidth(dp(7));pen.setStrokeCap(Paint.Cap.ROUND);
-                Path line=new Path();line.moveTo(dp(3),dp(6));line.cubicTo(getWidth()*.25f,dp(3),getWidth()*.7f,dp(10),getWidth()-dp(4),dp(5));canvas.drawPath(line,pen);
-            }
-        };
-        underline.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        root.addView(underline,new LinearLayout.LayoutParams(dp(304),dp(13)));
-
+        if("zh".equals(settings().getString("language","en"))) {
+            ImageView heading=new ImageView(this);heading.setImageResource(R.drawable.approved_heading);heading.setScaleType(ImageView.ScaleType.FIT_CENTER);heading.setContentDescription(getString(R.string.ui_002_home_is_a_tap_away));
+            LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,dp(78));hp.topMargin=dp(18);root.addView(heading,hp);
+        } else {
+            TextView headline=text(getString(R.string.ui_002_home_is_a_tap_away),30,ink);headline.setMaxLines(2);add(root,headline,18);
+        }
         title=text(getString(R.string.ui_004_ready_when_you_are),21,ink); title.setGravity(Gravity.CENTER); title.setTypeface(inkTypeface); add(root,title,12);
-        title.setPadding(dp(22),dp(12),dp(22),dp(12)); title.setBackground(background(0xffeee8da,8));
-        LinearLayout.LayoutParams titleLayout=new LinearLayout.LayoutParams(-2,-2);titleLayout.gravity=Gravity.CENTER_HORIZONTAL;titleLayout.topMargin=dp(12);title.setLayoutParams(titleLayout);
+        title.setPadding(dp(16),dp(8),dp(16),dp(8)); title.setBackground(background(0xffeee8da,8));
+        LinearLayout.LayoutParams titleLayout=new LinearLayout.LayoutParams(dp(190),dp(70));titleLayout.gravity=Gravity.CENTER_HORIZONTAL;titleLayout.topMargin=dp(12);title.setLayoutParams(titleLayout);
         subtitle=text(getString(R.string.ui_005_your_little_nest_is_just_one_tap_away),14,muted); subtitle.setGravity(Gravity.CENTER); add(root,subtitle,8);
-        action=primaryButton(getString(R.string.ui_006_let_s_go_home));action.setTextSize(24);action.setMinHeight(dp(82));action.setPadding(dp(36),0,dp(36),0);add(root,action,16); action.setOnClickListener(v -> {
+        action=primaryButton(getString(R.string.ui_006_let_s_go_home));action.setTextSize(30);action.setMinHeight(dp(100));action.setPadding(dp(36),0,dp(36),0);add(root,action,16); action.setOnClickListener(v -> {
             if(TunnelService.alive) startService(new Intent(this,TunnelService.class).setAction(TunnelService.STOP));
             else connect();
         });
@@ -80,18 +80,18 @@ public final class MainActivity extends Activity {
         lan=pathRow(paths,getString(R.string.ui_007_home_network),getString(R.string.ui_008_not_connected));
         View divider=new View(this);divider.setBackgroundColor(0xffe5dcc5);paths.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
         internet=pathRow(paths,getString(R.string.ui_009_internet),getString(R.string.ui_008_not_connected));
-        LinearLayout destination=panel(); add(root,destination,12);
-        add(destination,text(getString(R.string.ui_010_your_cozy_corner),15,muted),0); profile=text(getString(R.string.ui_011_let_s_set_up_your_home),19,ink);profile.setCompoundDrawablesWithIntrinsicBounds(glyph("nas",36),null,null,null);profile.setCompoundDrawablePadding(dp(16)); add(destination,profile,6);
+        LinearLayout destination=panel();destination.setMinimumHeight(dp(122)); add(root,destination,12);
+        add(destination,text(getString(R.string.ui_010_your_cozy_corner),19,muted),0); profile=text(getString(R.string.ui_011_let_s_set_up_your_home),19,ink);profile.setCompoundDrawablesWithIntrinsicBounds(glyph("nas",36),null,null,null);profile.setCompoundDrawablePadding(dp(16)); add(destination,profile,6);
         device=text("",13,amber); device.setTextIsSelectable(true); add(root,device,12);
         copyDevice=button(getString(R.string.copy_device_id),card,mint); add(root,copyDevice,8);
         copyDevice.setOnClickListener(v -> {
             String node=status().getString("node","");
             if(!node.isEmpty()) { ((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("ZeroTier device ID",node)); Toast.makeText(this,R.string.device_id_copied,Toast.LENGTH_SHORT).show(); }
         });
-        LinearLayout guide=panel(); add(root,guide,16);
+        LinearLayout guide=panel();guide.setPadding(dp(16),dp(10),dp(16),dp(12)); add(root,guide,16);
         guideToggle=button(getString(R.string.guide_title)+"  ›",card,ink);add(guide,guideToggle,0);
-        guideToggle.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);guideToggle.setTextSize(21);guideToggle.setCompoundDrawablesWithIntrinsicBounds(glyph("book",28),null,null,null);guideToggle.setCompoundDrawablePadding(dp(14));guideToggle.setPadding(0,0,0,0);
-        guideToggle.setBackground(null);
+        guideToggle.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);guideToggle.setTextSize(21);guideToggle.setCompoundDrawablesWithIntrinsicBounds(glyph("book",28),null,glyph("chevron",24),null);guideToggle.setCompoundDrawablePadding(dp(14));guideToggle.setPadding(0,0,0,0);
+        guideToggle.setBackground(null);guideToggle.setMinHeight(dp(38));guideToggle.setMinimumHeight(0);
         guideToggle.setOnClickListener(v -> {guideExpanded=!guideExpanded;render();});
         add(guide,text(getString(R.string.guide_summary),13,muted),2);
         guidance=text("",14,muted); add(guide,guidance,10);
@@ -108,8 +108,8 @@ public final class MainActivity extends Activity {
         if(saved!=null && saved.getBoolean("restoreSettings",false)) handler.post(this::showSettings);
     }
     private TextView pathRow(LinearLayout parent,String label,String value) {
-        LinearLayout row=new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL); row.setPadding(0,dp(9),0,dp(9));
-        row.addView(text(label,19,ink),new LinearLayout.LayoutParams(0,-2,1)); TextView result=text(value,17,muted); result.setPadding(dp(12),dp(8),dp(12),dp(8)); row.addView(result); add(parent,row,0); return result;
+        LinearLayout row=new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL); row.setPadding(0,0,0,0);
+        row.addView(text(label,22,ink),new LinearLayout.LayoutParams(0,-2,1)); TextView result=text(value,24,muted); result.setPadding(dp(10),dp(6),dp(10),dp(6)); row.addView(result); add(parent,row,0); return result;
     }
     @Override protected void onResume() { super.onResume(); handler.removeCallbacks(refresh); refresh.run(); }
     @Override protected void onPause() { handler.removeCallbacks(refresh); super.onPause(); }
@@ -137,7 +137,7 @@ public final class MainActivity extends Activity {
         } else if(s.getString("message","").matches(".*(失败|错误|撤销).*")) {
             description=getString(R.string.ui_027_the_connection_stopped_try_again_or_check);
         }
-        title.setText(heading);title.setCompoundDrawablesWithIntrinsicBounds(ok?glyph("ready",25):null,null,null,null);title.setCompoundDrawablePadding(dp(8)); title.setTextColor(ink); title.setBackground(background(ok?0xffdce9bc:phase.equals("degraded")?0xfff7d8bf:0xffeee8da,8)); subtitle.setText(description);subtitle.setVisibility((!active||ok)?View.GONE:View.VISIBLE);
+        title.setText(heading);title.setCompoundDrawablesWithIntrinsicBounds(ok?glyph("ready",25):null,null,null,null);title.setCompoundDrawablePadding(dp(8)); title.setTextColor(ink); title.setBackground(ok&&"zh".equals(settings().getString("language","en"))?null:background(ok?0xffdce9bc:phase.equals("degraded")?0xfff7d8bf:0xffeee8da,8)); subtitle.setText(description);subtitle.setVisibility((!active||ok)?View.GONE:View.VISIBLE);
         boolean authorization=active && (phase.equals("authorization")||phase.equals("joining"));
         copyDevice.setVisibility(authorization && !s.getString("node","").isEmpty()?View.VISIBLE:View.GONE);
         String help=getString(R.string.guide_steps);
@@ -165,7 +165,7 @@ public final class MainActivity extends Activity {
     }
     private void setPath(TextView view,boolean active,boolean ready,String phase) {
         view.setText(!active?getString(R.string.ui_008_not_connected):ready?getString(R.string.path_available):phase.equals("degraded")?getString(R.string.ui_038_retrying):getString(R.string.ui_039_checking));
-        view.setTextColor(ink);view.setBackground(null);view.setCompoundDrawablesWithIntrinsicBounds(glyph(active&&ready?"ready":active&&phase.equals("degraded")?"warning":"idle",26),null,null,null);view.setCompoundDrawablePadding(dp(10));
+        view.setTextColor(ink);view.setBackground(null);view.setCompoundDrawablesWithIntrinsicBounds(glyph(active&&ready?"ready":active&&phase.equals("degraded")?"warning":"idle",38),null,null,null);view.setCompoundDrawablePadding(dp(10));
     }
     private void connect() {
         if(settings().getString("network","").isEmpty()||settings().getString("gateway","").isEmpty()) { showSettings(); return; }
@@ -390,16 +390,18 @@ public final class MainActivity extends Activity {
     private android.graphics.drawable.Drawable background(int color,int radius) {
         return new SketchSurface(getResources().getDisplayMetrics().density,color);
     }
-    private TextView text(String value,int size,int color) { TextView t=new TextView(this); t.setText(value); t.setTypeface(inkTypeface); t.setTextSize(size); t.setTextColor(color); t.setLineSpacing(dp(2),1); return t; }
-    private Button button(String value,int color,int foreground) { return decorateButton(new Button(this),value,color,foreground); }
+    private TextView text(String value,int size,int color) { TextView t=new ApprovedArt.Label(this); t.setText(value); t.setTypeface(inkTypeface); t.setTextSize(size); t.setTextColor(color); t.setLineSpacing(dp(2),1); return t; }
+    private Button button(String value,int color,int foreground) { return decorateButton(new ApprovedArt.Action(this),value,color,foreground); }
     private Button primaryButton(String value) {
-        Button b=new Button(this) {
-            private final SketchGlyph power=glyph("power",32);
+        Button b=new ApprovedArt.Action(this) {
+            private final SketchGlyph power=glyph("power",56);
             @Override protected void onDraw(Canvas canvas) {
-                float icon=dp(32), gap=dp(14), width=getPaint().measureText(getText().toString());
+                float icon=dp(56), gap=dp(14), width=getPaint().measureText(getText().toString());
+                int art=ApprovedArt.textArt(getText().toString());
+                if(art!=0&&getResources().getConfiguration().fontScale<=1.2f){Bitmap b=ApprovedArt.bitmap(art);width=b.getWidth()/(float)b.getHeight()*getTextSize()*1.35f;}
                 canvas.save();canvas.translate((icon+gap)/2,0);super.onDraw(canvas);canvas.restore();
-                int left=Math.round((getWidth()-width-icon-gap)/2),top=(getHeight()-dp(32))/2;
-                power.setBounds(left,top,left+dp(32),top+dp(32));power.draw(canvas);
+                int left=Math.round((getWidth()-width-icon-gap)/2),top=(getHeight()-dp(56))/2;
+                power.setBounds(left,top,left+dp(56),top+dp(56));power.draw(canvas);
             }
         };
         return decorateButton(b,value,peach,ink);

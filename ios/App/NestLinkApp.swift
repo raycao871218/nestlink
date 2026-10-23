@@ -31,26 +31,35 @@ struct HomeView: View {
             ScrollView {
                 VStack(spacing: 24) {
                     HStack(spacing: 12) {
-                        Image("ChickenBadge").resizable().scaledToFit().frame(width: sizeClass == .regular ? 104 : 72, height: sizeClass == .regular ? 114 : 82).accessibilityHidden(true)
-                        Text(language == "zh" ? "窝窝连" : "NestLink").font(.ink(sizeClass == .regular ? 42 : 34, relativeTo: .title))
+                        Image("ApprovedChicken").resizable().scaledToFit().frame(width: sizeClass == .regular ? 104 : 74, height: sizeClass == .regular ? 114 : 80).accessibilityHidden(true)
+                        if language == "zh" {
+                            Image("ApprovedBrand").resizable().scaledToFit().frame(width: sizeClass == .regular ? 150 : 112, height: 48).accessibilityLabel("窝窝连")
+                        } else { Text("NestLink").font(.ink(30)) }
                         Spacer()
                         Button { showSettings = true } label: {
-                            Image(systemName: "gearshape").font(.system(size: 28, weight: .medium)).frame(width: 48, height: 48)
+                            ApprovedSymbol(name: "Gear", size: 38).frame(width: 48, height: 48)
                         }.accessibilityLabel(tr("连接设置", language)).disabled(vpn.busy)
                     }
-                    Text(tr("连接你的家庭网络", language)).font(.ink(42, relativeTo: .title)).lineLimit(2).minimumScaleFactor(0.8).frame(maxWidth: .infinity, alignment: .leading)
-                    SketchUnderline().stroke(sketchAccent, style: StrokeStyle(lineWidth: 5, lineCap: .round)).frame(width: 300, height: 12).accessibilityHidden(true)
-                    VStack(spacing: 14) {
-                        Text((vpn.verified ? "✓  " : "")+tr(vpn.title, language)).font(.ink(22, relativeTo: .title2)).multilineTextAlignment(.center).padding(.horizontal, 20).padding(.vertical, 10).stickerSurface(vpn.verified ? sketchGreen : Color(red: 0.933, green: 0.910, blue: 0.855))
-                        if vpn.active && !vpn.verified { Text(detail).foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: 480) }
-                    }.padding(.top, 4)
+                    if language == "zh" {
+                        Image("ApprovedHeading").resizable().scaledToFit().frame(maxWidth: 480).accessibilityLabel("连接你的家庭网络")
+                    } else { Text(tr("连接你的家庭网络", language)).font(.ink(30)).frame(maxWidth: .infinity, alignment: .leading) }
+                    VStack(spacing: 12) {
+                        if vpn.verified && language == "zh" {
+                            Image("ApprovedConnectedBadge").resizable().scaledToFit().frame(width: 190, height: 70).accessibilityLabel(tr(vpn.title, language))
+                        } else {
+                            Text(tr(vpn.title, language)).font(.ink(22)).padding(.horizontal, 22).padding(.vertical, 12).stickerSurface(sketchGreen)
+                        }
+                        if vpn.active && !vpn.verified { Text(detail).foregroundStyle(.secondary).multilineTextAlignment(.center) }
+                    }
                     Button {
                         if vpn.active { vpn.disconnect() }
                         else if vpn.settings.network.isEmpty || vpn.settings.gateway.isEmpty { showSettings = true }
                         else { vpn.connect() }
                     } label: {
-                        Label(tr(vpn.active ? (vpn.status == .connecting ? "取消连接" : "断开连接") : "连接", language), systemImage: vpn.active ? "power" : "network")
-                            .font(.ink(24, relativeTo: .title3)).foregroundStyle(sketchInk).frame(maxWidth: .infinity).padding(.vertical, 26)
+                        HStack(spacing: 14) {
+                            ApprovedSymbol(name: "Power", size: 48)
+                            ApprovedLabel(text: vpn.active ? (vpn.status == .connecting ? "取消连接" : "断开连接") : "连接", language: language, height: 40)
+                        }.frame(maxWidth: .infinity).padding(.vertical, 26).foregroundStyle(sketchInk)
                     }
                     .buttonStyle(SketchPressStyle()).stickerSurface(sketchAccent)
                     .disabled(vpn.busy || vpn.status == .disconnecting).frame(maxWidth: 500)
@@ -75,12 +84,12 @@ struct HomeView: View {
                     }
                     Button { showSettings = true } label: {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text(tr("当前网络", language)).font(.ink(15)).foregroundStyle(.secondary)
+                            ApprovedLabel(text: "当前网络", language: language, height: 25)
                             HStack(spacing: 16) {
-                                Image(systemName: "externaldrive").font(.system(size: 30))
+                                ApprovedSymbol(name: "Nas", size: 44)
                                 VStack(alignment: .leading, spacing: 6) {
-                                    Text(tr("家庭 NAS", language)).font(.ink(21))
-                                    Text(tr(vpn.settings.network.isEmpty ? "尚未设置" : "通过 ZeroTier 安全连接", language)).font(.ink(15)).foregroundStyle(.secondary)
+                                    ApprovedLabel(text: "家庭 NAS", language: language, height: 28)
+                                    ApprovedLabel(text: vpn.settings.network.isEmpty ? "尚未设置" : "通过 ZeroTier 安全连接", language: language, height: 20)
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.right")
@@ -90,14 +99,22 @@ struct HomeView: View {
                     DisclosureGroup(isExpanded: $showGuide) {
                         connectionGuide
                     } label: {
-                        Label(tr("连接指南", language), systemImage: "book").font(.ink(20, relativeTo: .headline))
+                        HStack(spacing: 14) {
+                            ApprovedSymbol(name: "Book", size: 36)
+                            VStack(alignment: .leading, spacing: 5) {
+                                ApprovedLabel(text: "连接指南", language: language, height: 28)
+                                ApprovedLabel(text: "配置、授权与故障排查", language: language, height: 18)
+                            }
+                        }
                     }.padding(18).stickerSurface(Color(red: 1, green: 0.993, blue: 0.965))
                     .onChange(of: vpn.snapshot["phase"] as? String) { _, phase in
                         if phase == "authorization" || phase == "degraded" { showGuide = true }
                     }
                     if developer { DeveloperPanel(vpn: vpn, language: language) }
                     if developer { Text(tr("开发者模式 · NestLink iPad", language)).font(.footnote).foregroundStyle(.secondary) }
-                }.padding(24).frame(maxWidth: 780).frame(maxWidth: .infinity)
+                }.padding(20).frame(maxWidth: 780).frame(maxWidth: .infinity)
+                    .background(Image("ApprovedFrame").resizable(capInsets: EdgeInsets(top: 22, leading: 22, bottom: 22, trailing: 22)))
+                    .padding(14)
             }
             .background(nestCream).foregroundStyle(sketchInk)
              .navigationTitle("").navigationBarTitleDisplayMode(.inline)
@@ -107,7 +124,7 @@ struct HomeView: View {
     }
     private var connectionGuide: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(tr("配置、授权与故障排查", language)).font(.subheadline)
+            ApprovedLabel(text: "配置、授权与故障排查", language: language, height: 20)
             let phase = vpn.snapshot["phase"] as? String
             if phase == "authorization" {
                 Text(tr("在 ZeroTier 管理端的成员列表找到此设备 ID，勾选授权，并确认已分配 IPv4。", language))
@@ -134,10 +151,11 @@ struct HomeView: View {
         let phase = vpn.snapshot["phase"] as? String
         let label = ready ? "可用" : !vpn.active ? "未连接" : phase == "degraded" ? "连接待恢复" : "检测中"
         return HStack(spacing: 14) {
-            Text(tr(title, language)).font(.ink(20, relativeTo: .headline))
+            ApprovedLabel(text: title, language: language, height: 29)
             Spacer()
-            Image(systemName: ready ? "checkmark.circle.fill" : "minus.circle").font(.system(size: 24)).foregroundStyle(ready ? nestForest : .secondary)
-            Text(tr(label, language)).font(.ink(18))
+            if ready { ApprovedSymbol(name: "Ready", size: 36) }
+            else { Image(systemName: "minus.circle").font(.system(size: 24)).foregroundStyle(.secondary) }
+            ApprovedLabel(text: label, language: language, height: 29)
         }.padding(.vertical, 10)
     }
     private func infoRow(_ title: String, _ value: String) -> some View {

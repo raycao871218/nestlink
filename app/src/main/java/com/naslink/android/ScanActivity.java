@@ -29,7 +29,7 @@ public final class ScanActivity extends Activity implements TextureView.SurfaceT
     private final int paper=Color.rgb(255,251,237),mint=Color.rgb(89,106,48);
     @Override protected void attachBaseContext(Context base) {super.attachBaseContext(AppLanguage.wrap(base));}
     @Override public void onCreate(Bundle saved) {
-        super.onCreate(saved);getWindow().setStatusBarColor(paper);getWindow().setNavigationBarColor(Build.VERSION.SDK_INT>=27?paper:0xff4c2718);
+        super.onCreate(saved);ApprovedArt.initialize(getResources());getWindow().setStatusBarColor(paper);getWindow().setNavigationBarColor(Build.VERSION.SDK_INT>=27?paper:0xff4c2718);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(paper);
         TextView title=label(getString(R.string.ui_092_find_your_little_nest),23);title.setPadding(dp(24),dp(24),dp(24),dp(12));root.addView(title);
