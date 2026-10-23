@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="network_name">网络名称：%1$s</string>
+    <string name="network_name_pending">名称将在入网后获取。</string>
+    <string name="scan_disconnect_apply">断开并填入设置</string>
+    <string name="scan_stop_failed">暂未完成断开，请断开连接后重试。</string>
     <string name="ui_001_settings">设置</string>
     <string name="ui_002_home_is_a_tap_away">连接你的家庭网络</string>
     <string name="ui_003_a_cozy_connection_to_your_own_little_corne">通过 NAS 访问内网与互联网</string>
@@ -32,7 +36,7 @@
     <string name="ui_030_your_home_is_all_set">配置已保存</string>
     <string name="ui_031_device_id">设备 ID：</string>
     <string name="ui_032_for_controller_approval">  ·  供管理端授权</string>
-    <string name="ui_033_developer_mode_nestlink_0_6_0">开发者模式 · 窝窝连 0.7.3</string>
+    <string name="ui_033_developer_mode_nestlink_0_6_0">开发者模式 · 窝窝连 0.7.4</string>
     <string name="ui_034_status">状态：</string>
     <string name="ui_035_device">\n设备：</string>
     <string name="ui_036_address">\n地址：</string>
@@ -63,7 +67,7 @@
     <string name="ui_061_disconnect_to_edit_your_connection_moon_he">修改连接参数前请先断开。Moon 为可选配置。</string>
     <string name="ui_062_developer_mode">开发者模式</string>
     <string name="ui_063_show_connection_logs_peer_paths_and_diagno">开启后显示连接日志、节点路径与诊断工具。</string>
-    <string name="ui_064_nestlink_0_6_0_one_vpn_for_your_home_netwo">NestLink 0.7.3 · ZeroTier / NAS</string>
+    <string name="ui_064_nestlink_0_6_0_one_vpn_for_your_home_netwo">NestLink 0.7.4 · ZeroTier / NAS</string>
     <string name="ui_065_your_nest_settings">连接设置</string>
     <string name="ui_066_save">保存</string>
     <string name="ui_067_enter_a_non_zero_16_character_hexadecimal">网络 ID 应为非零的 16 位十六进制。</string>

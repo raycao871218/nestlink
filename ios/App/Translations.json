@@ -110,5 +110,8 @@
   "NAS 虚拟 IPv4": "NAS virtual IPv4",
   "当前网络": "Current network",
   "家庭 NAS": "Home NAS",
-  "通过 ZeroTier 安全连接": "Connected through ZeroTier"
+  "通过 ZeroTier 安全连接": "Connected through ZeroTier",
+  "断开并填入设置": "Disconnect and fill settings",
+  "网络名称": "Network name",
+  "名称将在入网后获取。": "Name will appear after joining the network."
 }

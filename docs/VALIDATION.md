@@ -79,3 +79,13 @@ Later device check: installed 0.7.1 on PHP110 and confirmed the reference chicke
 
 - Restored the approved pale-green brush border for verified success, removing only the check artwork. Native label is localized: Chinese `已连接`, English `Connected`.
 - Android assembleDebug, lintDebug and translation parity passed. Installed versionCode 13 / 0.7.3 on PHP110; successful VPN state was not forced for visual testing. iOS remains pending Mac verification.
+
+## 0.7.4 home cleanup and network identity — 2026-10-23
+
+- Enlarged launcher chicken by reducing adaptive foreground inset and increasing artwork occupancy. Removed the placeholder current-network card and home guide; flexible spacing distributes central controls and the lower status panel.
+- The first status row displays the actual ZeroTier config name. Non-empty names are cached by normalized network ID, retained across disconnect/restart, and displayed below the matching network ID in settings. Switching to an unknown ID shows a pending-name hint instead of another network's cached name.
+- Both status rows and settings network-name hints use Resource Han Rounded CN Regular in Chinese; English uses regular sans-serif. Hero lettering remains the approved artwork.
+- Scan opens during an active tunnel. A decoded QR requires explicit confirmation to disconnect before filling draft settings; saving and connecting remain explicit. Existing saved settings are not silently replaced.
+- Final Android assembleDebug/lintDebug and translation checks passed. Core and QR decoder tests passed during this change; iOS literal translation coverage passed.
+- Installed versionCode 14 / 0.7.4 on PHP110. Real ZeroTier name and both successful health checks were observed. Later reinstall/relaunch showed the retained name while disconnected; settings UI hierarchy showed the same cached name. Inspected the redistributed home layout. Verified the scan entry enabled and opening ScanActivity while a tunnel was active. The final rounded font build installed successfully, but its final screenshot was unavailable after the display went dark. The explicit disconnect-and-fill QR branch was not exercised on the phone; the QR decoder was tested separately.
+- iOS/PacketTunnel updates require Mac compilation and iPad verification. No iOS build is claimed here.

@@ -53,7 +53,7 @@ public final class TunnelService extends VpnService {
         starting=true;
         alive=true;
         resetMoonConnectivity();
-        getSharedPreferences("status",0).edit().putString("phase","joining").putBoolean("lanReady",false).putBoolean("internetReady",false).apply();
+        getSharedPreferences("status",0).edit().putString("phase","joining").remove("networkName").remove("networkNameId").putBoolean("lanReady",false).putBoolean("internetReady",false).apply();
         try {
             if(prepare(this)!=null) throw new IllegalStateException("尚未授予 VPN 权限");
             android.content.SharedPreferences p=getSharedPreferences("connection",0);
@@ -265,6 +265,11 @@ public final class TunnelService extends VpnService {
     }
     private void configure(VirtualNetworkConfig config) {
         if(stopping) return;
+        if(config!=null) getSharedPreferences("status",0).edit()
+            .putString("networkName",config.getName()==null?"":config.getName())
+            .putString("networkNameId",String.format(java.util.Locale.ROOT,"%016x",networkId)).apply();
+        if(config!=null&&config.getName()!=null&&!config.getName().trim().isEmpty())
+            getSharedPreferences("connection",0).edit().putString("network_name_"+String.format(java.util.Locale.ROOT,"%016x",networkId),config.getName().trim()).apply();
         if(config==null || config.getStatus()!=VirtualNetworkStatus.NETWORK_STATUS_OK) {
             String reason=config==null?"网络已关闭":config.getStatus().name();
             closeTun(); current=null;

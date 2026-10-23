@@ -12,7 +12,6 @@ let nestForest = Color(red: 0.349, green: 0.416, blue: 0.188)
 struct HomeView: View {
     @StateObject private var vpn = VPNController()
     @State private var showSettings = false
-    @State private var showGuide = false
     @AppStorage("language") private var language = "en"
     @AppStorage("developer") private var developer = false
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -28,6 +27,7 @@ struct HomeView: View {
     }
     var body: some View {
         NavigationStack {
+            GeometryReader { geometry in
             ScrollView {
                 VStack(spacing: 24) {
                     HStack(spacing: 12) {
@@ -40,6 +40,7 @@ struct HomeView: View {
                             ApprovedSymbol(name: "Gear", size: 38).frame(width: 48, height: 48)
                         }.accessibilityLabel(tr("连接设置", language)).disabled(vpn.busy)
                     }
+                    Spacer(minLength: 24)
                     if language == "zh" {
                         Image("ApprovedHeading").resizable().scaledToFit().frame(maxWidth: 480).accessibilityLabel("连接你的家庭网络")
                     } else { Text(tr("连接你的家庭网络", language)).font(.ink(30)).frame(maxWidth: .infinity, alignment: .leading) }
@@ -72,6 +73,7 @@ struct HomeView: View {
                         }.foregroundStyle(.red).padding().frame(maxWidth: .infinity, alignment: .leading)
                             .background(.red.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
                     }
+                    Spacer(minLength: 24)
                     VStack(spacing: 10) {
                         statusCard("家庭网络", icon: "externaldrive", key: "lanReady")
                         Divider().overlay(sketchInk.opacity(0.15))
@@ -84,37 +86,9 @@ struct HomeView: View {
                             Button(tr("复制设备 ID", language)) { UIPasteboard.general.string = vpn.node }
                         }.padding(20).frame(maxWidth: .infinity).stickerSurface(Color(red: 1, green: 0.993, blue: 0.965))
                     }
-                    Button { showSettings = true } label: {
-                        VStack(alignment: .leading, spacing: 12) {
-                            ApprovedLabel(text: "当前网络", language: language, height: 25)
-                            HStack(spacing: 16) {
-                                ApprovedSymbol(name: "Nas", size: 44)
-                                VStack(alignment: .leading, spacing: 6) {
-                                    ApprovedLabel(text: "家庭 NAS", language: language, height: 28)
-                                    ApprovedLabel(text: vpn.settings.network.isEmpty ? "尚未设置" : "通过 ZeroTier 安全连接", language: language, height: 20)
-                                }
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                            }
-                        }.padding(22).frame(maxWidth: .infinity, alignment: .leading).stickerSurface(Color(red: 1, green: 0.993, blue: 0.965))
-                    }.buttonStyle(SketchPressStyle())
-                    DisclosureGroup(isExpanded: $showGuide) {
-                        connectionGuide
-                    } label: {
-                        HStack(spacing: 14) {
-                            ApprovedSymbol(name: "Book", size: 36)
-                            VStack(alignment: .leading, spacing: 5) {
-                                ApprovedLabel(text: "连接指南", language: language, height: 28)
-                                ApprovedLabel(text: "配置、授权与故障排查", language: language, height: 18)
-                            }
-                        }
-                    }.padding(18).stickerSurface(Color(red: 1, green: 0.993, blue: 0.965))
-                    .onChange(of: vpn.snapshot["phase"] as? String) { _, phase in
-                        if phase == "authorization" || phase == "degraded" { showGuide = true }
-                    }
                     if developer { DeveloperPanel(vpn: vpn, language: language) }
                     if developer { Text(tr("开发者模式 · NestLink iPad", language)).font(.footnote).foregroundStyle(.secondary) }
-                }.padding(20).frame(maxWidth: 780).frame(maxWidth: .infinity)
+                }.padding(20).frame(minHeight: max(0, geometry.size.height - 28)).frame(maxWidth: 780).frame(maxWidth: .infinity)
                     .background(Image("ApprovedFrame").resizable(capInsets: EdgeInsets(top: 22, leading: 22, bottom: 22, trailing: 22)))
                     .padding(14)
             }
@@ -122,41 +96,19 @@ struct HomeView: View {
              .navigationTitle("").navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showSettings) { SettingsView(vpn: vpn) }
-        }.preferredColorScheme(.light).tint(nestForest).environment(\.font, .ink(17)).environment(\.locale, Locale(identifier: language == "zh" ? "zh-Hans" : "en"))
-    }
-    private var connectionGuide: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ApprovedLabel(text: "配置、授权与故障排查", language: language, height: 20)
-            let phase = vpn.snapshot["phase"] as? String
-            if phase == "authorization" {
-                Text(tr("在 ZeroTier 管理端的成员列表找到此设备 ID，勾选授权，并确认已分配 IPv4。", language))
-            } else if phase == "degraded" {
-                if vpn.snapshot["lanReady"] as? Bool != true {
-                    Text(tr("NAS 不可达：确认 NAS 在线、处于同一 ZeroTier 网络，网关 IPv4 和检测端口正确。", language))
-                }
-                if vpn.snapshot["internetReady"] as? Bool != true {
-                    Text(tr("互联网检测失败：检查 NAS 的 mihomo、DNS 和出口配置。可先在浏览器测试内网地址。", language))
-                }
-                Text(tr("网络变化后会自动重试。持续失败时，断开后检查设置，再重新连接。", language))
-            } else {
-                Text(tr("1. NAS 加入同一 ZeroTier 网络，并启用 mihomo 网关。", language))
-                Text(tr("2. 扫码或填写网络 ID、NAS 虚拟 IPv4 和检测端口。", language))
-                Text(tr("3. 允许系统 VPN 配置，并在 ZeroTier 管理端授权此设备。", language))
-                if vpn.error != nil { Text(tr("连接失败时，先检查网络 ID 和设备授权，再检查 NAS 网关与检测端口。", language)) }
             }
-            if !vpn.active { Button(tr("配置网络", language)) { showSettings = true } }
-        }.font(.subheadline).foregroundStyle(sketchInk).frame(maxWidth: .infinity, alignment: .leading)
-            .padding(20).stickerSurface(Color(red: 1, green: 0.993, blue: 0.965))
+        }.preferredColorScheme(.light).tint(nestForest).environment(\.font, .ink(17)).environment(\.locale, Locale(identifier: language == "zh" ? "zh-Hans" : "en"))
     }
     private func statusCard(_ title: String, icon: String, key: String) -> some View {
         let ready = vpn.fresh && vpn.snapshot[key] as? Bool == true
         let phase = vpn.snapshot["phase"] as? String
         let label = ready ? "可用" : !vpn.active ? "未连接" : phase == "degraded" ? "连接待恢复" : "检测中"
+        let rowFont: Font = language == "zh" ? .custom("Resource-Han-Rounded-CN-Regular", size: 20, relativeTo: .body) : .ink(20)
         return HStack(spacing: 14) {
-            ApprovedLabel(text: title, language: language, height: 29)
+            Text(key == "lanReady" && !vpn.networkName.isEmpty ? vpn.networkName : tr(title, language)).font(rowFont).lineLimit(2)
             Spacer()
             if !ready && vpn.active { ProgressView().tint(sketchInk).accessibilityHidden(true) }
-            ApprovedLabel(text: label, language: language, height: 29)
+            Text(tr(label, language)).font(rowFont)
         }.padding(.vertical, 10)
     }
     private func infoRow(_ title: String, _ value: String) -> some View {

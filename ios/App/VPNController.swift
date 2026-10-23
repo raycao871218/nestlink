@@ -19,6 +19,7 @@ final class VPNController: ObservableObject {
     var active: Bool { [.connecting, .connected, .reasserting, .disconnecting].contains(status) }
     var node: String { snapshot["node"] as? String ?? "" }
     var address: String { snapshot["address"] as? String ?? "" }
+    var networkName: String { UserDefaults.standard.string(forKey: "network_name_" + settings.network.lowercased()) ?? "" }
     var fresh: Bool {
         status == .connected && snapshotFresh
     }
@@ -135,6 +136,10 @@ final class VPNController: ObservableObject {
                     self.requestID = nil
                     if let data, let result = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                         self.snapshot = result; self.lastSnapshot = Date()
+                        if let network = result["networkId"] as? String, network.lowercased() == self.settings.network.lowercased(),
+                           let name = result["networkName"] as? String, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            UserDefaults.standard.set(name.trimmingCharacters(in: .whitespacesAndNewlines), forKey: "network_name_" + network.lowercased())
+                        }
                         self.writeDebugStatus()
                     }
                 }

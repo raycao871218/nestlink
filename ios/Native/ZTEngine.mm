@@ -23,7 +23,7 @@ static NSError *engineError(NSString *s){return [NSError errorWithDomain:@"NestL
     volatile int64_t _deadline;
     int64_t _lastExpire;
     uint64_t _tx,_rx,_sendErrors;
-    NSString *_address,*_storageError;
+    NSString *_address,*_storageError,*_networkName;
     NSArray<NSDictionary<NSString *,NSString *> *> *_moons;
     int64_t _observedSince;
 }
@@ -157,7 +157,7 @@ static void event(ZT_Node *,void *u,void *,ZT_Event event,const void *){
 }
 - (void)configure:(const ZT_VirtualNetworkConfig *)c operation:(ZT_VirtualNetworkConfigOperation)op {
     if(!_node)return;
-    _bridge.reset();_address=@"";
+    _bridge.reset();_address=@"";_networkName=c?([NSString stringWithUTF8String:c->name]?:@""):@"";
     if(!c||op==ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN||op==ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY){
         if(self.configurationHandler)self.configurationHandler(@"",0,0,-1);return;
     }
@@ -186,7 +186,7 @@ static void event(ZT_Node *,void *u,void *,ZT_Event event,const void *){
     dispatch_async(_queue,^{
         ZT_NodeStatus status={};if(self->_node)ZT_Node_status(self->_node,&status);
         NSMutableDictionary *snapshot=[@{@"node":self->_node?[NSString stringWithFormat:@"%010llx",ZT_Node_address(self->_node)]:@"",
-                     @"address":self->_address?:@"",@"engineOnline":@(status.online),@"tx":@(self->_tx),@"rx":@(self->_rx),@"sendErrors":@(self->_sendErrors)} mutableCopy];
+                     @"networkId":[NSString stringWithFormat:@"%016llx",self->_network],@"networkName":self->_networkName?:@"",@"address":self->_address?:@"",@"engineOnline":@(status.online),@"tx":@(self->_tx),@"rx":@(self->_rx),@"sendErrors":@(self->_sendErrors)} mutableCopy];
         ZT_PeerList *list=self->_node?ZT_Node_peers(self->_node):nullptr;
         NSMutableDictionary *moons=[NSMutableDictionary dictionary];
         for(NSDictionary *moon in self->_moons){

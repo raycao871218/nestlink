@@ -15,6 +15,7 @@ struct SettingsView: View {
     @State private var scanned: QRPayload?
     @State private var loaded = false
     @State private var choosingLanguage = false
+    @State private var applyAfterDisconnect: QRPayload?
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -29,7 +30,7 @@ struct SettingsView: View {
                     HStack(spacing: 12) {
                         Button { scanning = true } label: {
                             Label(tr("扫码入网", language), systemImage: "qrcode.viewfinder").frame(maxWidth: .infinity)
-                        }.disabled(vpn.active)
+                        }
                         Button {
                             do { code = try QRPayload.encode(draft); showingCode = true }
                             catch { self.error = error.localizedDescription }
@@ -38,6 +39,9 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(tr("16 位 ZeroTier 网络 ID", language)).font(.ink(17, relativeTo: .subheadline))
                         TextField(tr("16 位 ZeroTier 网络 ID", language), text: $draft.network)
+                        let networkName = UserDefaults.standard.string(forKey: "network_name_" + draft.network.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) ?? ""
+                        Text(networkName.isEmpty ? tr("名称将在入网后获取。", language) : tr("网络名称", language) + ": " + networkName)
+                            .font(language == "zh" ? .custom("Resource-Han-Rounded-CN-Regular", size: 17, relativeTo: .body) : .ink(17)).foregroundStyle(.secondary)
                         Text(tr("NAS 虚拟 IPv4", language)).font(.ink(17, relativeTo: .subheadline)).padding(.top, 8)
                         TextField(tr("NAS 的 ZeroTier IPv4 地址", language), text: $draft.gateway).keyboardType(.decimalPad)
                         Text(tr("NAS 检测端口", language)).font(.ink(17, relativeTo: .subheadline)).padding(.top, 8)
@@ -65,7 +69,7 @@ struct SettingsView: View {
                         }.font(.subheadline).padding(.top, 12)
                     }.padding(18).stickerSurface(Color(red: 1, green: 0.993, blue: 0.965))
                     Text(tr("连接后 IPv4 流量和 DNS 经过 NAS，当前不转发 IPv6。首次出口检测持续失败会自动断开。", language)).font(.footnote).foregroundStyle(.secondary)
-                    Text("NestLink 0.7.3 · GPL-3.0-or-later").font(.footnote).foregroundStyle(.secondary)
+                    Text("NestLink 0.7.4 · GPL-3.0-or-later").font(.footnote).foregroundStyle(.secondary)
                     if let error { Text(tr(error, language)).foregroundStyle(.red) }
                 }.padding(22).frame(maxWidth: 680).frame(maxWidth: .infinity)
             }
@@ -87,9 +91,18 @@ struct SettingsView: View {
             .sheet(isPresented: $scanning, onDismiss: { pending = scanned; scanned = nil }) {
                 ScanJoinView(language: language) { payload in scanned = payload; scanning = false }
             }
+            .onChange(of: vpn.active) { _, active in
+                if !active, let payload = applyAfterDisconnect { draft = payload.applying(to: draft); applyAfterDisconnect = nil }
+            }
             .sheet(isPresented: $showingCode) { JoinCodeView(payload: code, language: language) }
             .alert(tr("确认入网信息", language), isPresented: Binding(get: { pending != nil }, set: { if !$0 { pending = nil } })) {
-                Button(tr("填入设置", language)) { if let pending { draft = pending.applying(to: draft) }; pending = nil }
+                Button(tr(vpn.active ? "断开并填入设置" : "填入设置", language)) {
+                    if let pending {
+                        if vpn.active { applyAfterDisconnect = pending; vpn.disconnect() }
+                        else { draft = pending.applying(to: draft) }
+                    }
+                    pending = nil
+                }
                 Button(tr("取消", language), role: .cancel) { pending = nil }
             } message: {
                 if let pending {

@@ -17,15 +17,14 @@ public final class MainActivity extends Activity {
     private final int muted=Color.rgb(126,107,85), mint=Color.rgb(89,106,48), amber=Color.rgb(150,97,34);
     private final int peach=Color.rgb(255,211,76);
     private Typeface inkTypeface;
+    private Typeface networkTypeface;
+    private TextView networkNameHint;
     private ProgressBar connectionProgress;
     private boolean restoreLanguageSettings;
-    private TextView title,subtitle,lan,internet,profile,device,diagnostics,mode;
+    private TextView title,subtitle,lan,internet,lanLabel,device,diagnostics,mode;
     private LinearLayout developerPanel;
     private Button action;
-    private TextView guidance;
-    private Button guideToggle;
-    private boolean guideExpanded;
-    private Button configureGuide,copyDevice;
+    private Button copyDevice;
     private Bundle draftSettings;
     private EditText editNetwork,editGateway,editPort,editMoons;
     private AlertDialog settingsDialog;
@@ -42,7 +41,8 @@ public final class MainActivity extends Activity {
         super.onCreate(saved);
         ApprovedArt.initialize(getResources());
         inkTypeface="zh".equals(settings().getString("language","en"))?getResources().getFont(R.font.zcool_kuaile):Typeface.create("sans-serif",Typeface.NORMAL);
-        if(saved!=null) {draftSettings=saved.getBundle("draftSettings");guideExpanded=saved.getBoolean("guideExpanded",false);}
+        networkTypeface="zh".equals(settings().getString("language","en"))?getResources().getFont(R.font.rounded_status):inkTypeface;
+        if(saved!=null) {draftSettings=saved.getBundle("draftSettings");}
         getWindow().setStatusBarColor(paper); getWindow().setNavigationBarColor(Build.VERSION.SDK_INT>=27?paper:ink);
         // Preserve an earlier install's explicitly configured proxy port.
         if(!settings().contains("port")) {
@@ -63,6 +63,7 @@ public final class MainActivity extends Activity {
         }
         Button settings=button("",paper,ink);settings.setContentDescription(getString(R.string.ui_001_settings));settings.setBackground(null);settings.setCompoundDrawablesWithIntrinsicBounds(glyph("gear",30),null,null,null);header.addView(settings,new LinearLayout.LayoutParams(dp(48),dp(48))); settings.setOnClickListener(v -> showSettings());
         add(root,header,0);
+        root.addView(new Space(this),new LinearLayout.LayoutParams(1,0,1));
         if("zh".equals(settings().getString("language","en"))) {
             ImageView heading=new ImageView(this);heading.setImageResource(R.drawable.approved_heading);heading.setScaleType(ImageView.ScaleType.FIT_CENTER);heading.setContentDescription(getString(R.string.ui_002_home_is_a_tap_away));
             LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,dp(78));hp.topMargin=dp(18);root.addView(heading,hp);
@@ -80,26 +81,16 @@ public final class MainActivity extends Activity {
             else connect();
         });
         LinearLayout paths=panel(); add(root,paths,14);
+        root.addView(new Space(this),root.indexOfChild(paths),new LinearLayout.LayoutParams(1,0,1));
         lan=pathRow(paths,getString(R.string.ui_007_home_network),getString(R.string.ui_008_not_connected));
         View divider=new View(this);divider.setBackgroundColor(0xffe5dcc5);paths.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
         internet=pathRow(paths,getString(R.string.ui_009_internet),getString(R.string.ui_008_not_connected));
-        LinearLayout destination=panel();destination.setMinimumHeight(dp(122)); add(root,destination,12);
-        add(destination,text(getString(R.string.ui_010_your_cozy_corner),19,muted),0); profile=text(getString(R.string.ui_011_let_s_set_up_your_home),19,ink);profile.setCompoundDrawablesWithIntrinsicBounds(glyph("nas",36),null,null,null);profile.setCompoundDrawablePadding(dp(16)); add(destination,profile,6);
         device=text("",13,amber); device.setTextIsSelectable(true); add(root,device,12);
         copyDevice=button(getString(R.string.copy_device_id),card,mint); add(root,copyDevice,8);
         copyDevice.setOnClickListener(v -> {
             String node=status().getString("node","");
             if(!node.isEmpty()) { ((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("ZeroTier device ID",node)); Toast.makeText(this,R.string.device_id_copied,Toast.LENGTH_SHORT).show(); }
         });
-        LinearLayout guide=panel();guide.setPadding(dp(16),dp(10),dp(16),dp(12)); add(root,guide,16);
-        guideToggle=button(getString(R.string.guide_title)+"  ›",card,ink);add(guide,guideToggle,0);
-        guideToggle.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);guideToggle.setTextSize(21);guideToggle.setCompoundDrawablesWithIntrinsicBounds(glyph("book",28),null,glyph("chevron",24),null);guideToggle.setCompoundDrawablePadding(dp(14));guideToggle.setPadding(0,0,0,0);
-        guideToggle.setBackground(null);guideToggle.setMinHeight(dp(38));guideToggle.setMinimumHeight(0);
-        guideToggle.setOnClickListener(v -> {guideExpanded=!guideExpanded;render();});
-        add(guide,text(getString(R.string.guide_summary),13,muted),2);
-        guidance=text("",14,muted); add(guide,guidance,10);
-        configureGuide=button(getString(R.string.guide_configure),paper,mint); add(guide,configureGuide,12);
-        configureGuide.setOnClickListener(v -> showSettings());
         mode=text(getString(R.string.ui_012_one_little_tap_a_little_closer_to_home),12,muted); mode.setGravity(Gravity.CENTER); add(root,mode,22);
         developerPanel=panel(); add(root,developerPanel,18);
         add(developerPanel,text(getString(R.string.ui_013_developer_tools),15,mint),0);
@@ -112,17 +103,21 @@ public final class MainActivity extends Activity {
     }
     private TextView pathRow(LinearLayout parent,String label,String value) {
         LinearLayout row=new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL); row.setPadding(0,0,0,0);
-        row.addView(text(label,22,ink),new LinearLayout.LayoutParams(0,-2,1)); TextView result=text(value,24,muted); result.setPadding(dp(10),dp(6),dp(10),dp(6)); row.addView(result); add(parent,row,0); return result;
+        TextView labelView=statusText(label);if(lanLabel==null)lanLabel=labelView;row.addView(labelView,new LinearLayout.LayoutParams(0,-2,1)); TextView result=statusText(value); result.setPadding(dp(10),dp(6),dp(10),dp(6)); row.addView(result); add(parent,row,0); return result;
+    }
+    private TextView statusText(String value) {
+        TextView view=new TextView(this);view.setText(value);view.setTextColor(ink);view.setTextSize(20);view.setTypeface(networkTypeface);view.setLineSpacing(dp(2),1);return view;
     }
     @Override protected void onResume() { super.onResume(); handler.removeCallbacks(refresh); refresh.run(); }
     @Override protected void onPause() { handler.removeCallbacks(refresh); super.onPause(); }
     @Override protected void onSaveInstanceState(Bundle out) {
         if(settingsDialog!=null && settingsDialog.isShowing()) captureDraft();
-        out.putBoolean("guideExpanded",guideExpanded);out.putBundle("draftSettings",draftSettings);out.putBoolean("restoreSettings",restoreLanguageSettings || (settingsDialog!=null && settingsDialog.isShowing()));super.onSaveInstanceState(out);
+        out.putBundle("draftSettings",draftSettings);out.putBoolean("restoreSettings",restoreLanguageSettings || (settingsDialog!=null && settingsDialog.isShowing()));super.onSaveInstanceState(out);
     }
     @Override protected void onDestroy() { handler.removeCallbacksAndMessages(null); super.onDestroy(); }
     private void render() {
         refreshMoonConnectivity();
+        updateNetworkNameHint();
         boolean active=TunnelService.alive;
         SharedPreferences s=status(); String phase=active?s.getString("phase","joining"):"disconnected";
         boolean ok=active && phase.equals("connected");
@@ -145,20 +140,18 @@ public final class MainActivity extends Activity {
         subtitle.setText(description);subtitle.setVisibility((!active||ok)?View.GONE:View.VISIBLE);
         boolean authorization=active && (phase.equals("authorization")||phase.equals("joining"));
         copyDevice.setVisibility(authorization && !s.getString("node","").isEmpty()?View.VISIBLE:View.GONE);
-        String help=getString(R.string.guide_steps);
-        if(authorization) help=getString(R.string.guide_authorization);
-        else if(active && phase.equals("degraded")) help=(!s.getBoolean("lanReady",false)?getString(R.string.guide_lan)+"\n\n":"")+(!s.getBoolean("internetReady",false)?getString(R.string.guide_internet)+"\n\n":"")+getString(R.string.guide_recovery);
-        guidance.setText(help);
-        boolean showGuide=guideExpanded||authorization||(active && phase.equals("degraded"));
-        guidance.setVisibility(showGuide?View.VISIBLE:View.GONE);
-        guideToggle.setText(getString(R.string.guide_title)+(showGuide?"  ⌄":"  ›"));
-        configureGuide.setVisibility(showGuide&&!active?View.VISIBLE:View.GONE);
         action.setText(active?(busy?getString(R.string.ui_028_cancel_connection):getString(R.string.ui_029_disconnect)):getString(R.string.ui_006_let_s_go_home));
         action.setBackground(new android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(0x22304455),background(peach,12),null)); action.setTextColor(ink);
         setPath(lan,active,s.getBoolean("lanReady",false),phase);
         setPath(internet,active,s.getBoolean("internetReady",false),phase);
         String network=settings().getString("network","");
-        profile.setText(network.isEmpty()?getString(R.string.ui_011_let_s_set_up_your_home):getString(R.string.home_nas)+"\n"+getString(R.string.profile_hint));
+        String nameKey="network_name_"+network.toLowerCase(java.util.Locale.ROOT);
+        String networkName=network.equalsIgnoreCase(s.getString("networkNameId",""))?s.getString("networkName","").trim():"";
+        if(networkName.isEmpty())networkName=settings().getString(nameKey,"");
+        else if(!networkName.equals(settings().getString(nameKey,"")))settings().edit().putString(nameKey,networkName).apply();
+        lanLabel.setText(networkName.isEmpty()?getString(R.string.ui_007_home_network):networkName);
+        lanLabel.setTypeface(networkTypeface);lanLabel.setMaxLines(2);lanLabel.setEllipsize(android.text.TextUtils.TruncateAt.END);lanLabel.setTooltipText(networkName);
+        lanLabel.setContentDescription(networkName.isEmpty()?getString(R.string.ui_007_home_network):"ZeroTier · "+networkName);
         String node=s.getString("node","");
         device.setVisibility(active && (phase.equals("authorization")||phase.equals("joining")) && !node.isEmpty()?View.VISIBLE:View.GONE);
         device.setText(getString(R.string.device_id,node));
@@ -200,7 +193,6 @@ public final class MainActivity extends Activity {
         draftSettings.putString("moons",editMoons.getText().toString());
     }
     private void scanNetwork() {
-        if(TunnelService.alive) {Toast.makeText(this,getString(R.string.ui_040_disconnect_before_scanning_a_different_net),Toast.LENGTH_LONG).show();return;}
         captureDraft();settingsDialog.dismiss();startActivityForResult(new Intent(this,ScanActivity.class),63);
     }
     private void confirmQr(QrPayload payload) {
@@ -210,13 +202,36 @@ public final class MainActivity extends Activity {
         if(payload.moons!=null) summary+="\nMoon："+(payload.moons.isEmpty()?getString(R.string.ui_044_none_clears_saved_moons):payload.moons);
         summary+=getString(R.string.ui_045_import_these_settings_then_save_and_connec);
         new AlertDialog.Builder(this).setTitle(getString(R.string.ui_046_found_your_network)).setMessage(summary)
-            .setPositiveButton(getString(R.string.ui_047_use_these_settings),(dialog,which) -> {
-                if(TunnelService.alive) return;
-                editNetwork.setText(payload.network);
-                if(payload.gateway!=null) editGateway.setText(payload.gateway);
-                if(payload.port!=null) editPort.setText(String.valueOf(payload.port));
-                if(payload.moons!=null) editMoons.setText(payload.moons);
+            .setPositiveButton(getString(TunnelService.alive?R.string.scan_disconnect_apply:R.string.ui_047_use_these_settings),(dialog,which) -> {
+                if(!TunnelService.alive) { fillQr(payload); return; }
+                captureDraft();settingsDialog.dismiss();
+                startService(new Intent(this,TunnelService.class).setAction(TunnelService.STOP));
+                handler.post(new Runnable() {
+                    private int attempts;
+                    public void run() {
+                        if(isFinishing()||isDestroyed())return;
+                        if(TunnelService.alive) {
+                            if(++attempts<50)handler.postDelayed(this,100);
+                            else {showSettings();Toast.makeText(MainActivity.this,R.string.scan_stop_failed,Toast.LENGTH_LONG).show();}
+                            return;
+                        }
+                        showSettings();fillQr(payload);
+                    }
+                });
             }).setNegativeButton(getString(R.string.ui_048_cancel),null).show();
+    }
+    private void fillQr(QrPayload payload) {
+        if(TunnelService.alive)return;
+        editNetwork.setText(payload.network);
+        if(payload.gateway!=null)editGateway.setText(payload.gateway);
+        if(payload.port!=null)editPort.setText(String.valueOf(payload.port));
+        if(payload.moons!=null)editMoons.setText(payload.moons);
+    }
+    private String connectionHelp() {
+        String phase=status().getString("phase","");
+        if(TunnelService.alive&&(phase.equals("authorization")||phase.equals("joining")))return getString(R.string.guide_authorization);
+        if(TunnelService.alive&&phase.equals("degraded"))return getString(R.string.guide_lan)+"\n\n"+getString(R.string.guide_internet)+"\n\n"+getString(R.string.guide_recovery);
+        return getString(R.string.guide_steps);
     }
     private void showNetworkCode() {
         try {
@@ -258,13 +273,19 @@ public final class MainActivity extends Activity {
         languageRow.addView(language,new LinearLayout.LayoutParams(dp(230),dp(48)));add(body,languageRow,4);language.setOnClickListener(v -> chooseLanguage());
         Button guide=button(getString(R.string.guide_title)+"  ›",paper,ink);
         guide.setCompoundDrawablesWithIntrinsicBounds(glyph("book",24),null,null,null);guide.setCompoundDrawablePadding(dp(12));guide.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        guide.setOnClickListener(v -> new AlertDialog.Builder(this).setTitle(R.string.guide_title).setMessage(getString(R.string.guide_steps)+"\n\n"+getString(R.string.ui_061_disconnect_to_edit_your_connection_moon_he)+"\n\n"+getString(R.string.ui_063_show_connection_logs_peer_paths_and_diagno)).setPositiveButton(R.string.ui_052_close,null).show());
+        guide.setOnClickListener(v -> new AlertDialog.Builder(this).setTitle(R.string.guide_title).setMessage(connectionHelp()+"\n\n"+getString(R.string.ui_061_disconnect_to_edit_your_connection_moon_he)+"\n\n"+getString(R.string.ui_063_show_connection_logs_peer_paths_and_diagno)).setPositiveButton(R.string.ui_052_close,null).show());
         LinearLayout qrActions=new LinearLayout(this);
         Button scan=button(getString(R.string.ui_055_scan_to_join),paper,mint),code=button(getString(R.string.ui_056_show_qr_code),paper,ink);
         qrActions.addView(scan,new LinearLayout.LayoutParams(0,dp(50),1));
         LinearLayout.LayoutParams codeParams=new LinearLayout.LayoutParams(0,dp(50),1);codeParams.leftMargin=dp(8);qrActions.addView(code,codeParams);add(body,qrActions,14);
-        scan.setCompoundDrawablesWithIntrinsicBounds(glyph("qr",25),null,null,null);code.setCompoundDrawablesWithIntrinsicBounds(glyph("qr",25),null,null,null);scan.setCompoundDrawablePadding(dp(8));code.setCompoundDrawablePadding(dp(8));scan.setEnabled(!TunnelService.alive);scan.setOnClickListener(v -> scanNetwork());code.setOnClickListener(v -> showNetworkCode());
+        scan.setCompoundDrawablesWithIntrinsicBounds(glyph("qr",25),null,null,null);code.setCompoundDrawablesWithIntrinsicBounds(glyph("qr",25),null,null,null);scan.setCompoundDrawablePadding(dp(8));code.setCompoundDrawablePadding(dp(8));scan.setOnClickListener(v -> scanNetwork());code.setOnClickListener(v -> showNetworkCode());
         EditText network=editNetwork=field(body,getString(R.string.ui_057_zerotier_network_id),settings().getString("network",""));
+        networkNameHint=text("",17,muted);networkNameHint.setTypeface(networkTypeface);add(body,networkNameHint,6);updateNetworkNameHint();
+        network.addTextChangedListener(new android.text.TextWatcher() {
+            public void beforeTextChanged(CharSequence value,int start,int count,int after) {}
+            public void onTextChanged(CharSequence value,int start,int before,int count) {updateNetworkNameHint();}
+            public void afterTextChanged(android.text.Editable value) {}
+        });
         EditText gateway=editGateway=field(body,getString(R.string.ui_058_nas_zerotier_ipv4_address),settings().getString("gateway",""));
         EditText port=editPort=field(body,getString(R.string.ui_059_nas_proxy_port),String.valueOf(settings().getInt("port",7890))); port.setInputType(2);
         EditText moons=editMoons=new EditText(this);moons.setText(settings().getString("moons",""));
@@ -310,6 +331,11 @@ public final class MainActivity extends Activity {
     private boolean moonSnapshotFresh() {
         long checked=status().getLong("moonCheckedAt",0),age=SystemClock.elapsedRealtime()-checked;
         return TunnelService.alive && checked>0 && age>=0 && age<=15000;
+    }
+    private void updateNetworkNameHint() {
+        if(networkNameHint==null||editNetwork==null)return;
+        String name=settings().getString("network_name_"+editNetwork.getText().toString().trim().toLowerCase(java.util.Locale.ROOT),"");
+        networkNameHint.setText(name.isEmpty()?getString(R.string.network_name_pending):getString(R.string.network_name,name));
     }
     private org.json.JSONObject moonInfo(MoonSettings.Moon moon) {
         if(!moonSnapshotFresh()) return null;
