@@ -37,11 +37,9 @@ struct SettingsView: View {
                         } label: { Label(tr("显示入网码", language), systemImage: "qrcode").frame(maxWidth: .infinity) }
                     }
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(tr("16 位 ZeroTier 网络 ID", language)).font(.ink(17, relativeTo: .subheadline))
-                        TextField(tr("16 位 ZeroTier 网络 ID", language), text: $draft.network)
                         let networkName = UserDefaults.standard.string(forKey: "network_name_" + draft.network.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) ?? ""
-                        Text(networkName.isEmpty ? tr("名称将在入网后获取。", language) : tr("网络名称", language) + ": " + networkName)
-                            .font(language == "zh" ? .custom("Resource-Han-Rounded-CN-Regular", size: 17, relativeTo: .body) : .ink(17)).foregroundStyle(.secondary)
+                        Text(tr("16 位 ZeroTier 网络 ID", language) + (networkName.isEmpty ? "" : " · " + networkName)).font(.ink(17, relativeTo: .subheadline))
+                        TextField(tr("16 位 ZeroTier 网络 ID", language), text: $draft.network)
                         Text(tr("NAS 虚拟 IPv4", language)).font(.ink(17, relativeTo: .subheadline)).padding(.top, 8)
                         TextField(tr("NAS 的 ZeroTier IPv4 地址", language), text: $draft.gateway).keyboardType(.decimalPad)
                         Text(tr("NAS 检测端口", language)).font(.ink(17, relativeTo: .subheadline)).padding(.top, 8)
@@ -69,7 +67,7 @@ struct SettingsView: View {
                         }.font(.subheadline).padding(.top, 12)
                     }.padding(18).stickerSurface(Color(red: 1, green: 0.993, blue: 0.965))
                     Text(tr("连接后 IPv4 流量和 DNS 经过 NAS，当前不转发 IPv6。首次出口检测持续失败会自动断开。", language)).font(.footnote).foregroundStyle(.secondary)
-                    Text("NestLink 0.7.4 · GPL-3.0-or-later").font(.footnote).foregroundStyle(.secondary)
+                    Text("NestLink 0.7.5 · GPL-3.0-or-later").font(.footnote).foregroundStyle(.secondary)
                     if let error { Text(tr(error, language)).foregroundStyle(.red) }
                 }.padding(22).frame(maxWidth: 680).frame(maxWidth: .infinity)
             }

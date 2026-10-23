@@ -8,7 +8,7 @@ Source of truth: `design/approved-home-reference.png`, supplied by the user. The
 - Both status rows use the same rounded font, size and color for network names, internet labels and state values. Do not mix screenshot lettering with dynamic network-name fonts in this panel.
 - Center the power symbol and action text together. Verified success retains the green brush border and localized text, without a check illustration.
 - Keep the header at the top, central connection controls together and status panel lower down using flexible spacing. Home has no placeholder network card or connection guide; guidance remains in settings.
-- Network names come from ZeroTier configuration and are cached by network ID for disconnected/reconnecting display. Settings show the matching cached name below the network ID.
+- Network names come from ZeroTier configuration and are cached by network ID for disconnected/reconnecting display. Settings append the cached name to the network-ID field heading, in the same font, size and color; there is no separate name row.
 - Settings use a compact language row, paired QR actions, labeled fields, Moon, developer mode and a collapsed connection guide.
 - Only show verified success after real health checks. Authorization and degraded connectivity retain state feedback; troubleshooting is available in settings.
 - Preserve native text/input accessibility and larger-font scrolling. Do not flatten the screens into images.

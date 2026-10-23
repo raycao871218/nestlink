@@ -89,3 +89,9 @@ Later device check: installed 0.7.1 on PHP110 and confirmed the reference chicke
 - Final Android assembleDebug/lintDebug and translation checks passed. Core and QR decoder tests passed during this change; iOS literal translation coverage passed.
 - Installed versionCode 14 / 0.7.4 on PHP110. Real ZeroTier name and both successful health checks were observed. Later reinstall/relaunch showed the retained name while disconnected; settings UI hierarchy showed the same cached name. Inspected the redistributed home layout. Verified the scan entry enabled and opening ScanActivity while a tunnel was active. The final rounded font build installed successfully, but its final screenshot was unavailable after the display went dark. The explicit disconnect-and-fill QR branch was not exercised on the phone; the QR decoder was tested separately.
 - iOS/PacketTunnel updates require Mac compilation and iPad verification. No iOS build is claimed here.
+
+## 0.7.5 inline settings network name — 2026-10-23
+
+- Appended the cached network name to the network-ID field heading using one native label and identical typography; removed the separate name/hint row. Unknown IDs show the ordinary heading. Draft-ID changes still select the corresponding cached name.
+- Android assembleDebug, lintDebug and translation parity passed. Installed 0.7.5 / versionCode 15 on PHP110. UI hierarchy and screenshot confirmed the combined heading on one line with the name, matching font/color, and no separate name row.
+- iOS Build 10 mirrors the layout; Mac compilation and iPad validation remain pending.

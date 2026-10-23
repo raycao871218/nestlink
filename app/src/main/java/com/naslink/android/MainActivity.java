@@ -18,7 +18,7 @@ public final class MainActivity extends Activity {
     private final int peach=Color.rgb(255,211,76);
     private Typeface inkTypeface;
     private Typeface networkTypeface;
-    private TextView networkNameHint;
+    private TextView networkNameHeading;
     private ProgressBar connectionProgress;
     private boolean restoreLanguageSettings;
     private TextView title,subtitle,lan,internet,lanLabel,device,diagnostics,mode;
@@ -117,7 +117,7 @@ public final class MainActivity extends Activity {
     @Override protected void onDestroy() { handler.removeCallbacksAndMessages(null); super.onDestroy(); }
     private void render() {
         refreshMoonConnectivity();
-        updateNetworkNameHint();
+        updateNetworkNameHeading();
         boolean active=TunnelService.alive;
         SharedPreferences s=status(); String phase=active?s.getString("phase","joining"):"disconnected";
         boolean ok=active && phase.equals("connected");
@@ -279,11 +279,11 @@ public final class MainActivity extends Activity {
         qrActions.addView(scan,new LinearLayout.LayoutParams(0,dp(50),1));
         LinearLayout.LayoutParams codeParams=new LinearLayout.LayoutParams(0,dp(50),1);codeParams.leftMargin=dp(8);qrActions.addView(code,codeParams);add(body,qrActions,14);
         scan.setCompoundDrawablesWithIntrinsicBounds(glyph("qr",25),null,null,null);code.setCompoundDrawablesWithIntrinsicBounds(glyph("qr",25),null,null,null);scan.setCompoundDrawablePadding(dp(8));code.setCompoundDrawablePadding(dp(8));scan.setOnClickListener(v -> scanNetwork());code.setOnClickListener(v -> showNetworkCode());
-        EditText network=editNetwork=field(body,getString(R.string.ui_057_zerotier_network_id),settings().getString("network",""));
-        networkNameHint=text("",17,muted);networkNameHint.setTypeface(networkTypeface);add(body,networkNameHint,6);updateNetworkNameHint();
+        EditText network=editNetwork=field(body,getString(R.string.ui_057_zerotier_network_id),settings().getString("network",""),true);
+        updateNetworkNameHeading();
         network.addTextChangedListener(new android.text.TextWatcher() {
             public void beforeTextChanged(CharSequence value,int start,int count,int after) {}
-            public void onTextChanged(CharSequence value,int start,int before,int count) {updateNetworkNameHint();}
+            public void onTextChanged(CharSequence value,int start,int before,int count) {updateNetworkNameHeading();}
             public void afterTextChanged(android.text.Editable value) {}
         });
         EditText gateway=editGateway=field(body,getString(R.string.ui_058_nas_zerotier_ipv4_address),settings().getString("gateway",""));
@@ -332,10 +332,10 @@ public final class MainActivity extends Activity {
         long checked=status().getLong("moonCheckedAt",0),age=SystemClock.elapsedRealtime()-checked;
         return TunnelService.alive && checked>0 && age>=0 && age<=15000;
     }
-    private void updateNetworkNameHint() {
-        if(networkNameHint==null||editNetwork==null)return;
+    private void updateNetworkNameHeading() {
+        if(networkNameHeading==null||editNetwork==null)return;
         String name=settings().getString("network_name_"+editNetwork.getText().toString().trim().toLowerCase(java.util.Locale.ROOT),"");
-        networkNameHint.setText(name.isEmpty()?getString(R.string.network_name_pending):getString(R.string.network_name,name));
+        networkNameHeading.setText(getString(R.string.ui_057_zerotier_network_id)+(name.isEmpty()?"":" · "+name));
     }
     private org.json.JSONObject moonInfo(MoonSettings.Moon moon) {
         if(!moonSnapshotFresh()) return null;
@@ -419,7 +419,11 @@ public final class MainActivity extends Activity {
         }
     }
     private EditText field(LinearLayout parent,String label,String value) {
-        add(parent,text(label,17,ink),14); EditText input=new EditText(this); input.setSingleLine(true); input.setTextSize(17); input.setTextColor(ink); input.setHintTextColor(muted); input.setHint(label); input.setText(value); input.setInputType(1|0x80000); input.setPadding(dp(14),dp(13),dp(14),dp(13)); input.setBackground(background(card,10)); add(parent,input,6); return input;
+        return field(parent,label,value,false);
+    }
+    private EditText field(LinearLayout parent,String label,String value,boolean networkField) {
+        TextView heading=text(label,17,ink);if(networkField)networkNameHeading=heading;add(parent,heading,14);
+        EditText input=new EditText(this); input.setSingleLine(true); input.setTextSize(17); input.setTextColor(ink); input.setHintTextColor(muted); input.setHint(label); input.setText(value); input.setInputType(1|0x80000); input.setPadding(dp(14),dp(13),dp(14),dp(13)); input.setBackground(background(card,10)); add(parent,input,6); return input;
     }
     private SketchGlyph glyph(String kind,int size) {return new SketchGlyph(getResources().getDisplayMetrics().density,kind,size);}
     private int dp(int n) { return Math.round(n*getResources().getDisplayMetrics().density); }
