@@ -22,6 +22,10 @@ def save(name,pic):
  folder=ios/f'Approved{name.title().replace("_","")}.imageset';folder.mkdir(exist_ok=True)
  pic.save(folder/'art.png');(folder/'Contents.json').write_text(json.dumps({'images':[{'filename':'art.png','idiom':'universal'}],'info':{'author':'xcode','version':1}},indent=2)+'\n',encoding='utf-8')
 for name,rect in regions.items():save(name,im.crop(rect))
+# Keep the approved success outline, clearing its old check and lettering.
+success=im.crop(regions['connected_badge'])
+ImageDraw.Draw(success).rounded_rectangle((20,16,255,90),radius=25,fill=(220,233,188))
+save('success',success)
 # Stretchable controls retain the original border pixels. Remove only the static
 # interior screenshot content, using blank paper from the same approved image.
 rects={'panel':(56,576,587,776),'button':(56,416,589,563),'frame':(23,11,619,1128)}

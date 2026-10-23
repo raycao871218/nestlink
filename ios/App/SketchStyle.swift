@@ -38,7 +38,7 @@ struct SketchUnderline: Shape {
 struct SketchPaper: View {
     var fill: Color = .white
     var body: some View {
-        Image(fill == sketchAccent ? "ApprovedButton" : "ApprovedPanel")
+        Image(fill == sketchGreen ? "ApprovedSuccess" : fill == sketchAccent ? "ApprovedButton" : "ApprovedPanel")
             .resizable(capInsets: EdgeInsets(top: 14, leading: 14, bottom: 14, trailing: 14), resizingMode: .stretch)
             .allowsHitTesting(false)
     }

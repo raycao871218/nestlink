@@ -12,7 +12,7 @@ final class SketchSurface extends Drawable {
     SketchSurface(float density,int color){this(density,color,"panel");}
     SketchSurface(float density,int color,String surface){this.color=color;this.surface=surface;}
     @Override public void draw(Canvas canvas){
-        int resource=surface.equals("frame")?R.drawable.approved_frame:color==0xffffd34c?R.drawable.approved_button:R.drawable.approved_panel;
+        int resource=surface.equals("frame")?R.drawable.approved_frame:color==0xffdce9bc?R.drawable.approved_success:color==0xffffd34c?R.drawable.approved_button:R.drawable.approved_panel;
         Bitmap b=ApprovedArt.bitmap(resource);Rect bounds=getBounds();
         int cap=surface.equals("frame")?30:22;
         float scale=bounds.width()/(float)b.getWidth();
@@ -20,7 +20,7 @@ final class SketchSurface extends Drawable {
         int[] sx={0,cap,b.getWidth()-cap,b.getWidth()},sy={0,cap,b.getHeight()-cap,b.getHeight()};
         float[] xx={bounds.left,bounds.left+dx,bounds.right-dx,bounds.right},yy={bounds.top,bounds.top+dy,bounds.bottom-dy,bounds.bottom};
         paint.setAlpha(alpha);
-        if(!surface.equals("frame")&&color!=0xffffd34c&&color!=0xfffffdf4&&color!=0xfffffbed)
+        if(!surface.equals("frame")&&color!=0xffdce9bc&&color!=0xffffd34c&&color!=0xfffffdf4&&color!=0xfffffbed)
             paint.setColorFilter(new PorterDuffColorFilter(color,PorterDuff.Mode.MULTIPLY));
         else paint.setColorFilter(null);
         for(int y=0;y<3;y++)for(int x=0;x<3;x++)canvas.drawBitmap(b,new Rect(sx[x],sy[y],sx[x+1],sy[y+1]),new RectF(xx[x],yy[y],xx[x+1],yy[y+1]),paint);

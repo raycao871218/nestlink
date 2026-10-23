@@ -65,7 +65,7 @@ struct SettingsView: View {
                         }.font(.subheadline).padding(.top, 12)
                     }.padding(18).stickerSurface(Color(red: 1, green: 0.993, blue: 0.965))
                     Text(tr("连接后 IPv4 流量和 DNS 经过 NAS，当前不转发 IPv6。首次出口检测持续失败会自动断开。", language)).font(.footnote).foregroundStyle(.secondary)
-                    Text("NestLink 0.7.2 · GPL-3.0-or-later").font(.footnote).foregroundStyle(.secondary)
+                    Text("NestLink 0.7.3 · GPL-3.0-or-later").font(.footnote).foregroundStyle(.secondary)
                     if let error { Text(tr(error, language)).foregroundStyle(.red) }
                 }.padding(22).frame(maxWidth: 680).frame(maxWidth: .infinity)
             }

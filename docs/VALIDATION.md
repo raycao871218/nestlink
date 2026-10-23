@@ -74,3 +74,8 @@ Later device check: installed 0.7.1 on PHP110 and confirmed the reference chicke
 - Language selection uses a custom brush-border dialog with ivory paper, yellow selection and explicit close. Draft-preserving language switching behavior remains in place.
 - Android assembleDebug, lintDebug and translation checks passed. Installed versionCode 12 / 0.7.2 on PHP110; screenshots verified English readability and the custom language dialog. The phone was disconnected during inspection, so the retry animation and successful connection state were not exercised live.
 - iOS changes remain uncompiled on Windows and require Mac/iPad validation.
+
+## 0.7.3 connected badge correction — 2026-10-23
+
+- Restored the approved pale-green brush border for verified success, removing only the check artwork. Native label is localized: Chinese `已连接`, English `Connected`.
+- Android assembleDebug, lintDebug and translation parity passed. Installed versionCode 13 / 0.7.3 on PHP110; successful VPN state was not forced for visual testing. iOS remains pending Mac verification.

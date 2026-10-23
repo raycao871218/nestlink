@@ -140,7 +140,7 @@ public final class MainActivity extends Activity {
         } else if(s.getString("message","").matches(".*(失败|错误|撤销).*")) {
             description=getString(R.string.ui_027_the_connection_stopped_try_again_or_check);
         }
-        title.setText(ok?"Connected":heading);title.setCompoundDrawables(null,null,null,null);title.setTextColor(ink);title.setBackground(null);
+        title.setText(heading);title.setCompoundDrawables(null,null,null,null);title.setTextColor(ink);title.setBackground(ok?background(0xffdce9bc,20):null);
         connectionProgress.setVisibility(active&&(busy||phase.equals("degraded"))?View.VISIBLE:View.GONE);
         subtitle.setText(description);subtitle.setVisibility((!active||ok)?View.GONE:View.VISIBLE);
         boolean authorization=active && (phase.equals("authorization")||phase.equals("joining"));

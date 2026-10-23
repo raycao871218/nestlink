@@ -48,7 +48,8 @@ struct HomeView: View {
                             if vpn.active && !vpn.verified && vpn.status != .disconnecting && vpn.snapshot["phase"] as? String != "authorization" {
                                 ProgressView().tint(sketchInk).accessibilityHidden(true)
                             }
-                            Text(vpn.verified ? "Connected" : tr(vpn.title, language)).font(.ink(22)).padding(.vertical, 12)
+                            Text(tr(vpn.title, language)).font(.ink(22)).padding(.horizontal, 24).padding(.vertical, 16)
+                                .background { if vpn.verified { SketchPaper(fill: sketchGreen) } }
                         }
                         if vpn.active && !vpn.verified { Text(detail).foregroundStyle(.secondary).multilineTextAlignment(.center) }
                     }
