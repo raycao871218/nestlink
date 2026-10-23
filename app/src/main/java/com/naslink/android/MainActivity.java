@@ -17,6 +17,7 @@ public final class MainActivity extends Activity {
     private final int muted=Color.rgb(126,107,85), mint=Color.rgb(89,106,48), amber=Color.rgb(150,97,34);
     private final int peach=Color.rgb(255,211,76);
     private Typeface inkTypeface;
+    private ProgressBar connectionProgress;
     private boolean restoreLanguageSettings;
     private TextView title,subtitle,lan,internet,profile,device,diagnostics,mode;
     private LinearLayout developerPanel;
@@ -40,7 +41,7 @@ public final class MainActivity extends Activity {
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
         ApprovedArt.initialize(getResources());
-        inkTypeface=getResources().getFont(R.font.zcool_kuaile);
+        inkTypeface="zh".equals(settings().getString("language","en"))?getResources().getFont(R.font.zcool_kuaile):Typeface.create("sans-serif",Typeface.NORMAL);
         if(saved!=null) {draftSettings=saved.getBundle("draftSettings");guideExpanded=saved.getBoolean("guideExpanded",false);}
         getWindow().setStatusBarColor(paper); getWindow().setNavigationBarColor(Build.VERSION.SDK_INT>=27?paper:ink);
         // Preserve an earlier install's explicitly configured proxy port.
@@ -68,9 +69,11 @@ public final class MainActivity extends Activity {
         } else {
             TextView headline=text(getString(R.string.ui_002_home_is_a_tap_away),30,ink);headline.setMaxLines(2);add(root,headline,18);
         }
-        title=text(getString(R.string.ui_004_ready_when_you_are),21,ink); title.setGravity(Gravity.CENTER); title.setTypeface(inkTypeface); add(root,title,12);
+        LinearLayout connectionState=new LinearLayout(this);connectionState.setGravity(Gravity.CENTER);add(root,connectionState,12);
+        connectionProgress=new ProgressBar(this);connectionProgress.setIndeterminate(true);connectionProgress.setIndeterminateTintList(ColorStateList.valueOf(ink));connectionProgress.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);connectionState.addView(connectionProgress,new LinearLayout.LayoutParams(dp(24),dp(24)));
+        title=text(getString(R.string.ui_004_ready_when_you_are),21,ink); title.setGravity(Gravity.CENTER); title.setTypeface(inkTypeface);connectionState.addView(title);
         title.setPadding(dp(16),dp(8),dp(16),dp(8)); title.setBackground(background(0xffeee8da,8));
-        LinearLayout.LayoutParams titleLayout=new LinearLayout.LayoutParams(dp(190),dp(70));titleLayout.gravity=Gravity.CENTER_HORIZONTAL;titleLayout.topMargin=dp(12);title.setLayoutParams(titleLayout);
+        LinearLayout.LayoutParams titleLayout=new LinearLayout.LayoutParams(-2,dp(70));titleLayout.gravity=Gravity.CENTER_HORIZONTAL;title.setMinWidth(dp(150));title.setLayoutParams(titleLayout);title.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         subtitle=text(getString(R.string.ui_005_your_little_nest_is_just_one_tap_away),14,muted); subtitle.setGravity(Gravity.CENTER); add(root,subtitle,8);
         action=primaryButton(getString(R.string.ui_006_let_s_go_home));action.setTextSize(30);action.setMinHeight(dp(100));action.setPadding(dp(36),0,dp(36),0);add(root,action,16); action.setOnClickListener(v -> {
             if(TunnelService.alive) startService(new Intent(this,TunnelService.class).setAction(TunnelService.STOP));
@@ -137,7 +140,9 @@ public final class MainActivity extends Activity {
         } else if(s.getString("message","").matches(".*(失败|错误|撤销).*")) {
             description=getString(R.string.ui_027_the_connection_stopped_try_again_or_check);
         }
-        title.setText(heading);title.setCompoundDrawablesWithIntrinsicBounds(ok?glyph("ready",25):null,null,null,null);title.setCompoundDrawablePadding(dp(8)); title.setTextColor(ink); title.setBackground(ok&&"zh".equals(settings().getString("language","en"))?null:background(ok?0xffdce9bc:phase.equals("degraded")?0xfff7d8bf:0xffeee8da,8)); subtitle.setText(description);subtitle.setVisibility((!active||ok)?View.GONE:View.VISIBLE);
+        title.setText(ok?"Connected":heading);title.setCompoundDrawables(null,null,null,null);title.setTextColor(ink);title.setBackground(null);
+        connectionProgress.setVisibility(active&&(busy||phase.equals("degraded"))?View.VISIBLE:View.GONE);
+        subtitle.setText(description);subtitle.setVisibility((!active||ok)?View.GONE:View.VISIBLE);
         boolean authorization=active && (phase.equals("authorization")||phase.equals("joining"));
         copyDevice.setVisibility(authorization && !s.getString("node","").isEmpty()?View.VISIBLE:View.GONE);
         String help=getString(R.string.guide_steps);
@@ -165,7 +170,7 @@ public final class MainActivity extends Activity {
     }
     private void setPath(TextView view,boolean active,boolean ready,String phase) {
         view.setText(!active?getString(R.string.ui_008_not_connected):ready?getString(R.string.path_available):phase.equals("degraded")?getString(R.string.ui_038_retrying):getString(R.string.ui_039_checking));
-        view.setTextColor(ink);view.setBackground(null);view.setCompoundDrawablesWithIntrinsicBounds(glyph(active&&ready?"ready":active&&phase.equals("degraded")?"warning":"idle",38),null,null,null);view.setCompoundDrawablePadding(dp(10));
+        view.setTextColor(ink);view.setBackground(null);view.setCompoundDrawablesWithIntrinsicBounds(active&&ready?null:glyph(active&&phase.equals("degraded")?"warning":"idle",30),null,null,null);view.setCompoundDrawablePadding(dp(10));
     }
     private void connect() {
         if(settings().getString("network","").isEmpty()||settings().getString("gateway","").isEmpty()) { showSettings(); return; }
@@ -228,15 +233,22 @@ public final class MainActivity extends Activity {
         } catch(Exception e) {Toast.makeText(this,getString(R.string.ui_053_enter_valid_network_gateway_port_and_moon),Toast.LENGTH_LONG).show();}
     }
     private void chooseLanguage() {
-        int current="zh".equals(settings().getString("language","en"))?1:0;
-        new AlertDialog.Builder(this).setTitle("Language / 语言")
-            .setSingleChoiceItems(new String[]{"English","简体中文"},current,(dialog,which) -> {
-                String selected=which==1?"zh":"en";
+        Dialog dialog=new Dialog(this);dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout body=column();body.setPadding(dp(24),dp(24),dp(24),dp(20));body.setBackground(background(paper,16));
+        TextView heading=text("Language / 语言",23,ink);heading.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));add(body,heading,0);
+        for(String selected:new String[]{"en","zh"}) {
+            boolean chosen=selected.equals(settings().getString("language","en"));
+            Button option=button((selected.equals("en")?"English":"简体中文")+(chosen?"  ·":""),chosen?peach:card,ink);option.setTypeface(Typeface.create("sans-serif",Typeface.NORMAL));option.setTextSize(20);option.setSelected(chosen);add(body,option,14);
+            option.setOnClickListener(v -> {
                 if(selected.equals(settings().getString("language","en"))) {dialog.dismiss();return;}
                 captureDraft();restoreLanguageSettings=true;settings().edit().putString("language",selected).apply();dialog.dismiss();
                 if(TunnelService.alive) startService(new Intent(this,TunnelService.class).setAction(TunnelService.LOCALIZE));
                 recreate();
-            }).setNegativeButton(getString(R.string.ui_052_close),null).show();
+            });
+        }
+        Button close=button(getString(R.string.ui_052_close),paper,muted);add(body,close,20);close.setOnClickListener(v -> dialog.dismiss());
+        dialog.setContentView(body);dialog.show();
+        Window window=dialog.getWindow();if(window!=null){window.setBackgroundDrawableResource(android.R.color.transparent);window.setLayout(Math.min(getResources().getDisplayMetrics().widthPixels-dp(40),dp(380)),-2);}
     }
     private void showSettings() {
         ScrollView scroll=new ScrollView(this); LinearLayout body=column(); body.setPadding(dp(20),dp(4),dp(20),dp(16)); scroll.addView(body);

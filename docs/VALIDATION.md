@@ -64,3 +64,13 @@ No reboot endurance, battery soak, or universal site/protocol coverage is claime
 - Android versionCode 11, versionName 0.7.1. assembleDebug and lintDebug passed after final icon generation. Translation parity passed. Networking code is unchanged.
 - Native controls retain real state, accessibility text and large-font/English fallbacks. No success state is manufactured to match the connected reference.
 - Physical-device installation and screenshot verification are pending: adb and Windows USB enumeration currently report no phone despite reconnect attempts. This build has not yet been visually verified on the phone.
+
+Later device check: installed 0.7.1 on PHP110 and confirmed the reference chicken in the home screen. Network checks were degraded at capture time.
+
+## 0.7.2 readability and state feedback — 2026-10-23
+
+- English uses a regular sans-serif typeface; verified success is plain `Connected`, without the extracted check badge. Ready path rows no longer show the check artwork.
+- Native indeterminate progress appears while joining, checking, reconnecting or retrying, and hides when inactive, authorized-waiting or verified.
+- Language selection uses a custom brush-border dialog with ivory paper, yellow selection and explicit close. Draft-preserving language switching behavior remains in place.
+- Android assembleDebug, lintDebug and translation checks passed. Installed versionCode 12 / 0.7.2 on PHP110; screenshots verified English readability and the custom language dialog. The phone was disconnected during inspection, so the retry animation and successful connection state were not exercised live.
+- iOS changes remain uncompiled on Windows and require Mac/iPad validation.

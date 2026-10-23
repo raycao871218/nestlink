@@ -44,10 +44,11 @@ struct HomeView: View {
                         Image("ApprovedHeading").resizable().scaledToFit().frame(maxWidth: 480).accessibilityLabel("连接你的家庭网络")
                     } else { Text(tr("连接你的家庭网络", language)).font(.ink(30)).frame(maxWidth: .infinity, alignment: .leading) }
                     VStack(spacing: 12) {
-                        if vpn.verified && language == "zh" {
-                            Image("ApprovedConnectedBadge").resizable().scaledToFit().frame(width: 190, height: 70).accessibilityLabel(tr(vpn.title, language))
-                        } else {
-                            Text(tr(vpn.title, language)).font(.ink(22)).padding(.horizontal, 22).padding(.vertical, 12).stickerSurface(sketchGreen)
+                        HStack(spacing: 12) {
+                            if vpn.active && !vpn.verified && vpn.status != .disconnecting && vpn.snapshot["phase"] as? String != "authorization" {
+                                ProgressView().tint(sketchInk).accessibilityHidden(true)
+                            }
+                            Text(vpn.verified ? "Connected" : tr(vpn.title, language)).font(.ink(22)).padding(.vertical, 12)
                         }
                         if vpn.active && !vpn.verified { Text(detail).foregroundStyle(.secondary).multilineTextAlignment(.center) }
                     }
@@ -153,8 +154,7 @@ struct HomeView: View {
         return HStack(spacing: 14) {
             ApprovedLabel(text: title, language: language, height: 29)
             Spacer()
-            if ready { ApprovedSymbol(name: "Ready", size: 36) }
-            else { Image(systemName: "minus.circle").font(.system(size: 24)).foregroundStyle(.secondary) }
+            if !ready && vpn.active { ProgressView().tint(sketchInk).accessibilityHidden(true) }
             ApprovedLabel(text: label, language: language, height: 29)
         }.padding(.vertical, 10)
     }

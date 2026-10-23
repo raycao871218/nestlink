@@ -74,6 +74,6 @@ struct SketchFieldStyle: TextFieldStyle {
 
 extension Font {
     static func ink(_ size: CGFloat, relativeTo style: Font.TextStyle = .body) -> Font {
-        .custom("ZCOOLKuaiLe-Regular", size: size, relativeTo: style)
+        .custom("HelveticaNeue", size: size, relativeTo: style)
     }
 }

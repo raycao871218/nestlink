@@ -26,7 +26,6 @@ final class ApprovedArt {
             case "配置、授权与故障排查":return R.drawable.approved_guide_hint;
             case "断开连接":return R.drawable.approved_disconnect;
             case "连接":return R.drawable.approved_connect;
-            case "已连接":return R.drawable.approved_connected_badge;
             default:return 0;
         }
     }

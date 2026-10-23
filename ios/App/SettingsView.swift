@@ -14,6 +14,7 @@ struct SettingsView: View {
     @State private var pending: QRPayload?
     @State private var scanned: QRPayload?
     @State private var loaded = false
+    @State private var choosingLanguage = false
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -21,9 +22,9 @@ struct SettingsView: View {
                     HStack {
                         Text(tr("语言", language)).font(.ink(20, relativeTo: .headline))
                         Spacer()
-                        Picker(tr("语言", language), selection: $language) {
-                            Text("English").tag("en"); Text("简体中文").tag("zh")
-                        }.labelsHidden()
+                        Button { choosingLanguage = true } label: {
+                            Text(language == "zh" ? "简体中文  ⌄" : "English  ⌄").padding(10).stickerSurface(sketchAccent)
+                        }
                     }.padding(14).stickerSurface(Color(red: 1, green: 0.993, blue: 0.965))
                     HStack(spacing: 12) {
                         Button { scanning = true } label: {
@@ -64,7 +65,7 @@ struct SettingsView: View {
                         }.font(.subheadline).padding(.top, 12)
                     }.padding(18).stickerSurface(Color(red: 1, green: 0.993, blue: 0.965))
                     Text(tr("连接后 IPv4 流量和 DNS 经过 NAS，当前不转发 IPv6。首次出口检测持续失败会自动断开。", language)).font(.footnote).foregroundStyle(.secondary)
-                    Text("NestLink 0.7.1 · GPL-3.0-or-later").font(.footnote).foregroundStyle(.secondary)
+                    Text("NestLink 0.7.2 · GPL-3.0-or-later").font(.footnote).foregroundStyle(.secondary)
                     if let error { Text(tr(error, language)).foregroundStyle(.red) }
                 }.padding(22).frame(maxWidth: 680).frame(maxWidth: .infinity)
             }
@@ -96,6 +97,26 @@ struct SettingsView: View {
                 }
             }
         }.tint(nestForest)
+        .overlay {
+            if choosingLanguage {
+                ZStack {
+                    Color.black.opacity(0.3).ignoresSafeArea().onTapGesture { choosingLanguage = false }
+                    VStack(spacing: 16) {
+                        Text("Language / 语言").font(.system(size: 23, weight: .semibold))
+                        ForEach(["en", "zh"], id: \.self) { value in
+                            Button {
+                                language = value; choosingLanguage = false
+                            } label: {
+                                Text((value == "en" ? "English" : "简体中文") + (language == value ? "  ·" : ""))
+                                    .font(.system(size: 20)).frame(maxWidth: .infinity).padding(16)
+                                    .stickerSurface(language == value ? sketchAccent : nestCream)
+                            }.accessibilityAddTraits(language == value ? .isSelected : [])
+                        }
+                        Button(tr("取消", language)) { choosingLanguage = false }.padding(10)
+                    }.padding(24).frame(maxWidth: 360).stickerSurface(nestCream).padding(20).foregroundStyle(sketchInk)
+                }.accessibilityAddTraits(.isModal)
+            }
+        }
     }
 }
 
