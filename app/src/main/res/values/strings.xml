@@ -138,4 +138,25 @@
     <string name="profile_hint">Connected through ZeroTier</string>
     <string name="home_nas">Home NAS</string>
     <string name="path_available">Available</string>
+    <string name="home_enable">At home / away: automatic switching</string>
+    <string name="home_ssid">Home Wi-Fi name (SSID)</string>
+    <string name="home_nas_address">NAS local IPv4 address</string>
+    <string name="home_port">NAS SOCKS5 port</string>
+    <string name="home_read_network">Read current Wi-Fi</string>
+    <string name="home_local_ip">Local IPv4</string>
+    <string name="home_mask">Subnet mask</string>
+    <string name="home_gateway">Current gateway</string>
+    <string name="home_no_wifi">No Wi-Fi network available.</string>
+    <string name="home_ssid_unavailable">Unavailable; allow precise location and enable system Location.</string>
+    <string name="home_permission_help">Wi-Fi names require precise location permission and system Location. Only an empty home name is filled automatically. The gateway may not be the NAS; NAS settings are never filled automatically.</string>
+    <string name="home_help">On matching Wi-Fi, use local VPN → NAS SOCKS5 without ZeroTier. Away or if the Wi-Fi name is initially unavailable, use ZeroTier. Start/pause with the home button; saving does not connect. NAS must be on the same subnet and support SOCKS5 TCP and UDP. No Wi-Fi gateway or DNS changes are needed. Settings stay on this device and are excluded from QR codes.</string>
+    <string name="home_path">At home · NAS SOCKS5</string>
+    <string name="home_away_path">Automatic switching · ZeroTier when away</string>
+    <string name="home_subnet_error">Home NAS must be on the current Wi-Fi IPv4 subnet.</string>
+    <string name="home_ssid_invalid">Enter the exact home Wi-Fi name (up to 32 UTF-8 bytes).</string>
+    <string name="home_nas_invalid">Enter a private NAS IPv4 address, such as 192.168.1.66.</string>
+    <string name="home_port_invalid">NAS SOCKS5 port must be from 1 to 65535.</string>
+    <string name="home_failed">Home NAS proxy failed. Check the NAS address, SOCKS5 port and Wi-Fi connection, then reconnect.</string>
+    <string name="home_degraded">Home proxy checks failed; retrying. Check that the NAS SOCKS5 service supports TCP and UDP.</string>
+    <string name="home_use_name">Use this Wi-Fi name</string>
 </resources>

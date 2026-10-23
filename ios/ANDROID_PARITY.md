@@ -32,4 +32,4 @@ Build 15 补充：iPad 已实现家庭 Wi-Fi 下的本地 VPN → NAS SOCKS5 通
 
 ## 双端当前共同不支持
 
-多个并行网络、IPv6 转发、独立的自动开机连接开关及系统级 kill switch。不要将这些列作从 Android 遗漏的功能。iPad 新增可选的家庭 SSID 按需切换（在家关闭 ZeroTier，其他网络按需连接），尚待家庭网络真机验收；Android 未同步实现。
+多个并行网络、IPv6 转发、独立的自动开机连接开关及系统级 kill switch。不要将这些列作从 Android 遗漏的功能。iPad 新增可选的家庭 SSID 按需切换（在家关闭 ZeroTier，其他网络按需连接）。Android 已补齐家庭 SSID、同子网 NAS SOCKS5 本地 VPN、在家／外出自动切换、网络信息读取和宽屏内容限宽；家庭配置不随二维码分享。Android 三架构构建、核心测试及原生启停冒烟检查通过，完整跨网络与锁屏通路仍待真机验收，见 `docs/ANDROID_HOME_ROUTING.md`。

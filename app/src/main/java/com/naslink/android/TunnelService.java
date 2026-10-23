@@ -38,6 +38,12 @@ public final class TunnelService extends VpnService {
     private ConnectivityManager connectivity;
     private ConnectivityManager.NetworkCallback networks;
     private Network physical;
+    private HomeProxyEngine homeProxy;
+    private boolean homeMode;
+    private long routeGeneration;
+    private String activeRoute="";
+    private final RouteStability routeStability=new RouteStability();
+    private int routeSwitches, homeStarts, nodeStarts;
     private final long[] deadline=new long[1];
     private boolean starting;
     private File store;
@@ -53,7 +59,7 @@ public final class TunnelService extends VpnService {
         starting=true;
         alive=true;
         resetMoonConnectivity();
-        getSharedPreferences("status",0).edit().putString("phase","joining").remove("networkName").remove("networkNameId").putBoolean("lanReady",false).putBoolean("internetReady",false).apply();
+        getSharedPreferences("status",0).edit().putString("phase","joining").remove("homeError").putBoolean("homeMode",false).remove("networkName").remove("networkNameId").putBoolean("lanReady",false).putBoolean("internetReady",false).apply();
         try {
             if(prepare(this)!=null) throw new IllegalStateException("尚未授予 VPN 权限");
             android.content.SharedPreferences p=getSharedPreferences("connection",0);
@@ -69,22 +75,22 @@ public final class TunnelService extends VpnService {
             publish("正在启动 ZeroTier",true);
             connectivity=getSystemService(ConnectivityManager.class);
             networks=new ConnectivityManager.NetworkCallback() {
-                @Override public void onAvailable(Network n) { submit(() -> attachNetwork(n)); }
-                @Override public void onLost(Network n) { submit(() -> {
-                    if(n.equals(physical)) {
-                        invalidateHealth("reconnecting"); resetMoonConnectivity(); closeUdp(); physical=null; setUnderlyingNetworks(null); publish("底层网络断开，等待恢复",true);
-                        for(Network candidate:connectivity.getAllNetworks()) {
-                            if(candidate.equals(n)) continue;
-                            NetworkCapabilities caps=connectivity.getNetworkCapabilities(candidate);
-                            if(caps!=null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) && !caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) {
-                                attachNetwork(candidate); if(udp!=null) break;
-                            }
-                        }
-                    }
-                }); }
+                @Override public void onAvailable(Network n) { submit(() -> selectNetwork(null)); }
+                @Override public void onCapabilitiesChanged(Network n,NetworkCapabilities c) { submit(() -> selectNetwork(null)); }
+                @Override public void onLinkPropertiesChanged(Network n,LinkProperties l) { submit(() -> selectNetwork(null)); }
+                @Override public void onLost(Network n) { submit(() -> selectNetwork(n)); }
             };
             connectivity.registerNetworkCallback(new NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN).build(),networks);
-            engine.execute(this::initialize);
+            engine.scheduleWithFixedDelay(() -> selectNetwork(null),0,3,TimeUnit.SECONDS);
+            engine.scheduleWithFixedDelay(() -> {
+                if(stopping || node==null) return;
+                try { requireOk(node.processBackgroundTasks(System.currentTimeMillis(),deadline),"网络后台任务"); }
+                catch(Exception e) { shutdown("引擎错误："+safe(e)); }
+            },0,100,TimeUnit.MILLISECONDS);
+            engine.scheduleWithFixedDelay(() -> { if(bridge!=null) bridge.expire(); },60,60,TimeUnit.SECONDS);
+            engine.scheduleWithFixedDelay(this::updateMoonStatus,2,5,TimeUnit.SECONDS);
+            engine.scheduleWithFixedDelay(this::updateDiagnostics,1,2,TimeUnit.SECONDS);
+            health.scheduleWithFixedDelay(() -> submit(this::checkHealth),2,20,TimeUnit.SECONDS);
         } catch(Exception|LinkageError e) { shutdown("启动失败："+safe(e)); }
         return START_NOT_STICKY;
     }
@@ -95,6 +101,8 @@ public final class TunnelService extends VpnService {
             if(!store.isDirectory() && !store.mkdirs()) throw new IOException("无法创建身份存储");
             installBootstrap();
             node=new Node(System.currentTimeMillis());
+            nodeStarts++;recordRouteStats();
+            final Node initializingNode=node;
             ResultCode result=node.init(this::readState,new DataStorePutListener() {
                 @Override public int onDataStorePut(String name,byte[] data,boolean secure) {
                     try {
@@ -115,22 +123,13 @@ public final class TunnelService extends VpnService {
                 }
                 @Override public void onTrace(String message) { /* Never persist native trace or identity material. */ }
             },this::receiveFrame,(id,operation,config) -> {
-                submit(() -> configure(config)); return 0;
+                submit(() -> { if(node==initializingNode) configure(config); }); return 0;
             },null);
             requireOk(result,"引擎初始化");
             loadMoons();
             getSharedPreferences("status",0).edit().putString("node",String.format(java.util.Locale.ROOT,"%010x",node.address())).apply();
             requireOk(node.join(networkId),"加入网络");
             publish("等待网络配置；首次连接请授权设备",true);
-            engine.scheduleWithFixedDelay(() -> {
-                if(stopping || node==null) return;
-                try { requireOk(node.processBackgroundTasks(System.currentTimeMillis(),deadline),"网络后台任务"); }
-                catch(Exception e) { shutdown("引擎错误："+safe(e)); }
-            },0,100,TimeUnit.MILLISECONDS);
-            engine.scheduleWithFixedDelay(() -> { if(bridge!=null) bridge.expire(); },60,60,TimeUnit.SECONDS);
-            engine.scheduleWithFixedDelay(this::updateMoonStatus,2,5,TimeUnit.SECONDS);
-            engine.scheduleWithFixedDelay(this::updateDiagnostics,1,2,TimeUnit.SECONDS);
-            health.scheduleWithFixedDelay(() -> submit(this::checkHealth),2,20,TimeUnit.SECONDS);
         } catch(Exception|LinkageError e) { shutdown("启动失败："+safe(e)); }
     }
     private void installBootstrap() throws IOException {
@@ -224,6 +223,90 @@ public final class TunnelService extends VpnService {
             int count=Math.min(bytes.length,target.length); System.arraycopy(bytes,0,target,0,count); return count;
         } catch(Exception e) { return -2; }
     }
+    private void selectNetwork(Network lost) {
+        if(stopping) return;
+        try {
+            SharedPreferences prefs=getSharedPreferences("connection",0);
+            Network selected=null; int best=-1;
+            for(Network n:connectivity.getAllNetworks()) {
+                if(n.equals(lost)) continue;
+                NetworkCapabilities caps=connectivity.getNetworkCapabilities(n);
+                if(caps==null || caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) continue;
+                boolean wifi=caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI);
+                boolean home=prefs.getBoolean("homeEnabled",false) && !prefs.getString("homeSsid","").isEmpty() && prefs.getString("homeSsid","").equals(CurrentNetworkReader.ssid(this,n));
+                int score=(home?100:0)+(caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)?20:0)+(wifi?10:0)+(n.equals(physical)?1:0);
+                if(score>best) { selected=n; best=score; }
+            }
+            long now=SystemClock.elapsedRealtime();
+            if(selected==null) {
+                if(physical!=null) {
+                    if(homeMode) stopRoute(); else { invalidateHealth("reconnecting"); closeUdp(); }
+                    physical=null;activeRoute="";setUnderlyingNetworks(null);
+                    publish("等待可用网络",true);
+                }
+                return;
+            }
+            String observed=CurrentNetworkReader.ssid(this,selected);
+            NetworkCapabilities selectedCaps=connectivity.getNetworkCapabilities(selected);
+            boolean useHome=RouteStability.retainHome(prefs.getBoolean("homeEnabled",false),
+                selectedCaps!=null && selectedCaps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI),
+                selected.equals(physical),homeMode,prefs.getString("homeSsid",""),observed);
+            // DNS, validation, route ordering and other LinkProperties metadata do
+            // not alter our TUN. Only local IPv4 changes matter to the home path.
+            String local="";
+            LinkProperties properties=connectivity.getLinkProperties(selected);
+            if(useHome && properties!=null) {
+                java.util.List<String> addresses=new java.util.ArrayList<>();
+                for(LinkAddress ip:properties.getLinkAddresses()) if(ip.getAddress() instanceof Inet4Address) addresses.add(ip.toString());
+                java.util.Collections.sort(addresses);local=addresses.toString();
+            }
+            String desired=selected.toString()+"/"+useHome+"/"+local;
+            boolean usable=physical!=null && !physical.equals(lost) && (homeMode?homeProxy!=null:node!=null && udp!=null && !udp.isClosed());
+            if(!routeStability.ready(activeRoute,desired,now,usable)) return;
+            boolean preserveZeroTier=!useHome && !homeMode && node!=null;
+            if(!preserveZeroTier) stopRoute();
+            else closeUdp(); // Rebind the socket; keep the node and established TUN.
+            physical=selected;homeMode=useHome;activeRoute=desired;
+            routeSwitches++;recordRouteStats();
+            setUnderlyingNetworks(new Network[]{selected});
+            SharedPreferences.Editor status=getSharedPreferences("status",0).edit().putBoolean("homeMode",useHome).remove("homeError");
+            if(!preserveZeroTier) status.remove("node").remove("networkName").remove("diagnostics");
+            status.apply();
+            if(useHome) startHome(prefs);
+            else { attachNetwork(selected); if(!stopping && node==null) initialize(); }
+        } catch(Exception|LinkageError e) { if(homeMode && getSharedPreferences("status",0).getString("homeError","").isEmpty()) getSharedPreferences("status",0).edit().putString("homeError","failed").apply(); shutdown("连接失败："+safe(e)); }
+    }
+    private void recordRouteStats() {
+        getSharedPreferences("status",0).edit().putInt("routeSwitches",routeSwitches).putInt("homeStarts",homeStarts).putInt("nodeStarts",nodeStarts).apply();
+    }
+    private void stopRoute() throws Exception {
+        routeGeneration++;
+        if(homeProxy!=null) { HomeProxyEngine old=homeProxy; homeProxy=null; old.stop(); }
+        closeTun(); closeUdp(); resetMoonConnectivity(); current=null;
+        if(node!=null) { node.close(); node=null; }
+    }
+    private void startHome(SharedPreferences prefs) throws Exception {
+        String ssid=prefs.getString("homeSsid","");
+        String nas=prefs.getString("homeNas",""); int port=prefs.getInt("homePort",7890);
+        HomeNetworkSettings.validate(true,ssid,nas,port);
+        if(!CurrentNetworkReader.onSubnet(connectivity,physical,nas)) {
+            getSharedPreferences("status",0).edit().putString("homeError","subnet").apply();
+            throw new IOException(AppLanguage.wrap(this).getString(R.string.home_subnet_error));
+        }
+        Builder builder=new Builder().setSession(AppLanguage.wrap(this).getString(R.string.home_path)).setMtu(1500).setBlocking(false)
+            .addAddress("198.18.0.1",32).addRoute("0.0.0.0",0).addDnsServer("1.1.1.1")
+            .setConfigureIntent(PendingIntent.getActivity(this,0,new Intent(this,MainActivity.class),PendingIntent.FLAG_IMMUTABLE));
+        if(Build.VERSION.SDK_INT>=29) builder.setMetered(false);
+        tun=builder.establish(); if(tun==null) throw new IOException("VPN 授权失效");
+        currentAddress="198.18.0.1";
+        final long generation=routeGeneration;
+        homeProxy=new HomeProxyEngine();
+        homeStarts++;recordRouteStats();
+        homeProxy.start(tun.getFd(),physical,this,nas,port,() -> submit(() -> {
+            if(!stopping && homeProxy!=null && generation==routeGeneration) { getSharedPreferences("status",0).edit().putString("homeError","failed").apply(); shutdown("家庭代理转发失败"); }
+        }));
+        invalidateHealth("validating"); publish("家庭 NAS 直连 · 正在验证",true); checkHealth();
+    }
     private void attachNetwork(Network network) {
         if(stopping) return;
         try {
@@ -264,7 +347,7 @@ public final class TunnelService extends VpnService {
         }
     }
     private void configure(VirtualNetworkConfig config) {
-        if(stopping) return;
+        if(stopping || homeMode || node==null) return;
         if(config!=null) getSharedPreferences("status",0).edit()
             .putString("networkName",config.getName()==null?"":config.getName())
             .putString("networkNameId",String.format(java.util.Locale.ROOT,"%016x",networkId)).apply();
@@ -365,8 +448,8 @@ public final class TunnelService extends VpnService {
         if(selected==null) return;
         final Network vpn=selected;
         final long epoch=connectionHealth.epoch();
-        final String nas=gateway;
-        final int proxyPort=getSharedPreferences("connection",0).getInt("port",7890);
+        final String nas=homeMode?getSharedPreferences("connection",0).getString("homeNas",""):gateway;
+        final int proxyPort=getSharedPreferences("connection",0).getInt(homeMode?"homePort":"port",7890);
         checking=true;
         try { health.execute(() -> {
             boolean lan=false, internet=false;
@@ -413,7 +496,10 @@ public final class TunnelService extends VpnService {
     private static String safe(Throwable e) { return e.getMessage()==null?e.getClass().getSimpleName():e.getMessage(); }
     private synchronized void shutdown(String reason) {
         if(stopping) return;
-        stopping=true; alive=false; resetMoonConnectivity(); closeUdp(); closeTun();
+        stopping=true; alive=false;
+        // Stop the native reader before releasing its borrowed TUN descriptor.
+        try { engine.execute(() -> { try { stopRoute(); } catch(Exception ignored) {} }); } catch(RejectedExecutionException ignored) {}
+        resetMoonConnectivity();
         if(connectivity!=null && networks!=null) { try { connectivity.unregisterNetworkCallback(networks); } catch(Exception ignored) {} }
         publish(reason,false);
         try { engine.execute(() -> { if(node!=null) { try { node.close(); } catch(Exception ignored) {} node=null; } }); }

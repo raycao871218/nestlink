@@ -17,6 +17,9 @@ public final class AppLanguage {
     public static String inputError(Context context,Exception error) {
         String message=error.getMessage();
         if(error instanceof NumberFormatException) return context.getString(R.string.ui_068_choose_a_port_from_1_to_65535);
+        if("home_ssid_invalid".equals(message)) return context.getString(R.string.home_ssid_invalid);
+        if("home_nas_invalid".equals(message)) return context.getString(R.string.home_nas_invalid);
+        if("home_port_invalid".equals(message)) return context.getString(R.string.home_port_invalid);
         if(message==null) return context.getString(R.string.input_error);
         boolean chinese=context.getResources().getConfiguration().getLocales().get(0).getLanguage().equals("zh");
         if(chinese || !message.matches("(?s).*[\\u4e00-\\u9fff].*")) return message;

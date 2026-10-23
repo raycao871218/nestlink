@@ -33,6 +33,6 @@ The complete ZXing Apache-2.0 license is bundled in app/src/main/assets/licenses
 
 Unmodified ZCOOL KuaiLe Regular from Google Fonts, Copyright 2018 The ZCOOL KuaiLe Project Authors, under SIL Open Font License 1.1. Source: https://github.com/googlefonts/zcool-kuaile . License is bundled in Android assets/licenses and iOS Fonts/OFL.txt.
 
-## iPad local SOCKS5 forwarding
+## Android and iPad local SOCKS5 forwarding
 
-HevSocks5Tunnel and its pinned SOCKS5 core, task system, lwIP and libyaml dependencies are included as source in `vendor/hev-socks5-tunnel`. Commit hashes are recorded in `SOURCE.json`; upstream is https://github.com/heiher/hev-socks5-tunnel. The MIT, BSD and other upstream license notices are retained alongside each component and bundled in the iPad app. The local packet bridge uses public NetworkExtension packet APIs.
+HevSocks5Tunnel and its pinned SOCKS5 core, task system, lwIP and libyaml dependencies are included as source in `vendor/hev-socks5-tunnel`. Commit hashes are recorded in `SOURCE.json`; upstream is https://github.com/heiher/hev-socks5-tunnel. The MIT, BSD and other upstream license notices are retained alongside each component and bundled in the iPad app and Android assets/licenses/HomeProxy-Licenses.txt. The iPad packet bridge uses public NetworkExtension APIs. Android builds the same core through CMake and a new JNI adapter, using the VpnService TUN descriptor. Outbound native sockets are protected from the VPN and bound to the selected physical network with android_setsocknetwork.

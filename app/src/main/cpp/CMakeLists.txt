@@ -10,3 +10,37 @@ target_compile_options(ZeroTierOneJNI PRIVATE -O2)
 target_compile_definitions(ZeroTierOneJNI PRIVATE NDEBUG ZT_NO_PEER_METRICS)
 target_link_options(ZeroTierOneJNI PRIVATE "-Wl,-z,max-page-size=16384")
 target_link_libraries(ZeroTierOneJNI log)
+
+enable_language(ASM)
+set(HOME "${CMAKE_CURRENT_LIST_DIR}/../../../../vendor/hev-socks5-tunnel")
+set(TASK "${HOME}/third-part/hev-task-system")
+set(LWIP "${HOME}/third-part/lwip")
+set(YAML "${HOME}/third-part/yaml")
+file(GLOB_RECURSE HOME_SRC CONFIGURE_DEPENDS "${HOME}/src/*.c")
+# The upstream JNI_OnLoad registers hev.htproxy.TProxyService from its example
+# app. NestLink provides home_proxy_jni.c and must never load that adapter.
+list(FILTER HOME_SRC EXCLUDE REGEX "/hev-jni[.]c$")
+file(GLOB_RECURSE TASK_SRC CONFIGURE_DEPENDS "${TASK}/src/*.c")
+list(APPEND TASK_SRC "${TASK}/src/kern/task/hev-task-execute.S")
+file(GLOB_RECURSE LWIP_SRC CONFIGURE_DEPENDS "${LWIP}/src/*.c")
+file(GLOB YAML_SRC CONFIGURE_DEPENDS "${YAML}/src/*.c")
+add_library(HomeTasks STATIC ${TASK_SRC})
+target_include_directories(HomeTasks PRIVATE "${TASK}/include" "${TASK}/src")
+target_compile_definitions(HomeTasks PRIVATE ENABLE_STACK_OVERFLOW_DETECTION ENABLE_IO_SPLICE_SYSCALL
+    CONFIG_STACK_BACKEND=STACK_MMAP CONFIG_STACK_OVERFLOW_DETECTION=1 CONFIG_SCHED_CLOCK=CLOCK_NONE
+    CONFIG_MEMALLOC_SLICE_ALIGN=16 CONFIG_MEMALLOC_SLICE_MAX_SIZE=4096 CONFIG_MEMALLOC_SLICE_MAX_COUNT=1000)
+target_compile_options(HomeTasks PRIVATE -O2 -fno-stack-clash-protection -fvisibility=hidden)
+add_library(HomeLwip STATIC ${LWIP_SRC})
+target_include_directories(HomeLwip PRIVATE "${LWIP}/src/include" "${LWIP}/src/ports/include")
+target_compile_definitions(HomeLwip PRIVATE FD_SET_DEFINED SOCKLEN_T_DEFINED)
+add_library(HomeYaml STATIC ${YAML_SRC})
+target_include_directories(HomeYaml PRIVATE "${YAML}/include")
+target_compile_definitions(HomeYaml PRIVATE YAML_VERSION_MAJOR=0 YAML_VERSION_MINOR=2 YAML_VERSION_PATCH=5 YAML_VERSION_STRING="0.2.5")
+add_library(NestLinkHome SHARED home_proxy_jni.c ${HOME_SRC})
+target_include_directories(NestLinkHome PRIVATE
+    "${HOME}/include" "${HOME}/src" "${HOME}/src/misc" "${HOME}/src/core/include"
+    "${TASK}/include" "${TASK}/src" "${LWIP}/src/include" "${LWIP}/src/ports/include" "${YAML}/include")
+target_compile_definitions(NestLinkHome PRIVATE ENABLE_LIBRARY FD_SET_DEFINED SOCKLEN_T_DEFINED COMMIT_ID="nestlink-pinned")
+target_compile_options(NestLinkHome PRIVATE -O2 -fno-stack-clash-protection)
+target_link_options(NestLinkHome PRIVATE "-Wl,--wrap=socket" "-Wl,-z,max-page-size=16384")
+target_link_libraries(NestLinkHome HomeYaml HomeLwip HomeTasks android log)

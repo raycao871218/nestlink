@@ -26,7 +26,9 @@ public final class MainActivity extends Activity {
     private Button action;
     private Button copyDevice;
     private Bundle draftSettings;
-    private EditText editNetwork,editGateway,editPort,editMoons;
+    private EditText editNetwork,editGateway,editPort,editMoons,editHomeSsid,editHomeNas,editHomePort;
+    private Switch homeEnabled;
+    private TextView homeNetworkInfo;
     private AlertDialog settingsDialog;
     private Button moonSummary;
     private AlertDialog moonDialog;
@@ -52,6 +54,7 @@ public final class MainActivity extends Activity {
         }
         ScrollView scroll=new ScrollView(this); scroll.setFillViewport(true); scroll.setBackgroundColor(paper);scroll.setPadding(dp(16),dp(8),dp(16),dp(10));scroll.setClipToPadding(false);
         LinearLayout root=column(); root.setPadding(dp(20),dp(14),dp(20),dp(18));root.setBackground(new SketchSurface(getResources().getDisplayMetrics().density,paper,"frame")); scroll.addView(root);
+        if(getResources().getConfiguration().screenWidthDp>=700) root.setLayoutParams(new android.widget.FrameLayout.LayoutParams(dp(640),-2,Gravity.CENTER_HORIZONTAL));
         LinearLayout header=new LinearLayout(this); header.setGravity(Gravity.CENTER_VERTICAL);
         ImageView badge=new ImageView(this);badge.setImageResource(R.drawable.approved_chicken);badge.setScaleType(ImageView.ScaleType.FIT_CENTER);badge.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         LinearLayout.LayoutParams badgeLayout=new LinearLayout.LayoutParams(dp(74),dp(80));badgeLayout.rightMargin=dp(10);header.addView(badge,badgeLayout);
@@ -135,9 +138,12 @@ public final class MainActivity extends Activity {
         } else if(s.getString("message","").matches(".*(失败|错误|撤销).*")) {
             description=getString(R.string.ui_027_the_connection_stopped_try_again_or_check);
         }
+        String homeError=s.getString("homeError","");
+        if(!active && !homeError.isEmpty()) description=getString("subnet".equals(homeError)?R.string.home_subnet_error:R.string.home_failed);
+        if(active && phase.equals("degraded") && s.getBoolean("homeMode",false)) description=getString(R.string.home_degraded);
         title.setText(heading);title.setCompoundDrawables(null,null,null,null);title.setTextColor(ink);title.setBackground(ok?background(0xffdce9bc,20):null);
         connectionProgress.setVisibility(active&&(busy||phase.equals("degraded"))?View.VISIBLE:View.GONE);
-        subtitle.setText(description);subtitle.setVisibility((!active||ok)?View.GONE:View.VISIBLE);
+        subtitle.setText(description);subtitle.setVisibility((!active && homeError.isEmpty() || ok)?View.GONE:View.VISIBLE);
         boolean authorization=active && (phase.equals("authorization")||phase.equals("joining"));
         copyDevice.setVisibility(authorization && !s.getString("node","").isEmpty()?View.VISIBLE:View.GONE);
         action.setText(active?(busy?getString(R.string.ui_028_cancel_connection):getString(R.string.ui_029_disconnect)):getString(R.string.ui_006_let_s_go_home));
@@ -156,8 +162,9 @@ public final class MainActivity extends Activity {
         device.setVisibility(active && (phase.equals("authorization")||phase.equals("joining")) && !node.isEmpty()?View.VISIBLE:View.GONE);
         device.setText(getString(R.string.device_id,node));
         boolean dev=settings().getBoolean("developer",false); developerPanel.setVisibility(dev?View.VISIBLE:View.GONE);
-        mode.setVisibility(dev?View.VISIBLE:View.GONE);
+        mode.setVisibility(dev || settings().getBoolean("homeEnabled",false)?View.VISIBLE:View.GONE);
         mode.setText(dev?getString(R.string.ui_033_developer_mode_nestlink_0_6_0):getString(R.string.ui_012_one_little_tap_a_little_closer_to_home));
+        if(settings().getBoolean("homeEnabled",false)) mode.setText(s.getBoolean("homeMode",false) && active?R.string.home_path:R.string.home_away_path);
         if(dev) diagnostics.setText(getString(R.string.ui_034_status)+s.getString("message","")+getString(R.string.ui_035_device)+node+getString(R.string.ui_036_address)+s.getString("address","")+"\n"+s.getString("healthLog","")+"\n"+s.getString("moons","")+"\n"+s.getString("diagnostics",""));
         else diagnostics.setText("");
     }
@@ -172,9 +179,15 @@ public final class MainActivity extends Activity {
         }
         requestVpn();
     }
-    private void requestVpn() { Intent permission=VpnService.prepare(this); if(permission!=null) startActivityForResult(permission,41); else startTunnel(); }
+    private void requestVpn() {
+        if(settings().getBoolean("homeEnabled",false) && checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION)!=android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{android.Manifest.permission.ACCESS_COARSE_LOCATION,android.Manifest.permission.ACCESS_FINE_LOCATION},44);return;
+        }
+        launchVpn();
+    }
+    private void launchVpn() { Intent permission=VpnService.prepare(this); if(permission!=null) startActivityForResult(permission,41); else startTunnel(); }
     private void startTunnel() { startForegroundService(new Intent(this,TunnelService.class)); handler.postDelayed(this::render,250); }
-    @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] results) { super.onRequestPermissionsResult(request,permissions,results); if(request==42) requestVpn(); }
+    @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] results) { super.onRequestPermissionsResult(request,permissions,results); if(request==42) requestVpn(); if(request==44) launchVpn(); if(request==43 && homeNetworkInfo!=null) readHomeNetwork(); }
     @Override protected void onActivityResult(int request,int result,Intent data) {
         super.onActivityResult(request,result,data);
         if(request==41 && result==RESULT_OK) startTunnel();
@@ -191,6 +204,7 @@ public final class MainActivity extends Activity {
         draftSettings=new Bundle();draftSettings.putString("network",editNetwork.getText().toString());
         draftSettings.putString("gateway",editGateway.getText().toString());draftSettings.putString("port",editPort.getText().toString());
         draftSettings.putString("moons",editMoons.getText().toString());
+        if(editHomeSsid!=null) { draftSettings.putString("homeSsid",editHomeSsid.getText().toString()); draftSettings.putString("homeNas",editHomeNas.getText().toString()); draftSettings.putString("homePort",editHomePort.getText().toString()); draftSettings.putBoolean("homeEnabled",homeEnabled.isChecked()); }
     }
     private void scanNetwork() {
         captureDraft();settingsDialog.dismiss();startActivityForResult(new Intent(this,ScanActivity.class),63);
@@ -295,7 +309,27 @@ public final class MainActivity extends Activity {
             public void onTextChanged(CharSequence value,int start,int before,int count) {updateMoonSummary();}
             public void afterTextChanged(android.text.Editable value) {}
         });updateMoonSummary();
+        homeEnabled=new Switch(this);homeEnabled.setText(R.string.home_enable);homeEnabled.setTextColor(ink);homeEnabled.setTextSize(19);
+        homeEnabled.setChecked(settings().getBoolean("homeEnabled",false));add(body,homeEnabled,18);
+        homeNetworkInfo=text(getString(R.string.home_permission_help),13,muted);add(body,homeNetworkInfo,8);
+        Button readNetwork=button(getString(R.string.home_read_network),paper,ink);add(body,readNetwork,8);
+        readNetwork.setEnabled(!TunnelService.alive);
+        readNetwork.setOnClickListener(v -> {
+            if(checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION)!=android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{android.Manifest.permission.ACCESS_COARSE_LOCATION,android.Manifest.permission.ACCESS_FINE_LOCATION},43);
+            } else readHomeNetwork();
+        });
+        editHomeSsid=field(body,getString(R.string.home_ssid),settings().getString("homeSsid",""));
+        editHomeNas=field(body,getString(R.string.home_nas_address),settings().getString("homeNas",""));
+        editHomePort=field(body,getString(R.string.home_port),String.valueOf(settings().getInt("homePort",7890)));editHomePort.setInputType(2);
+        add(body,text(getString(R.string.home_help),13,muted),10);
+        homeEnabled.setEnabled(!TunnelService.alive);
+        for(EditText field:new EditText[]{editHomeSsid,editHomeNas,editHomePort}) field.setEnabled(!TunnelService.alive);
         if(draftSettings!=null) {
+            homeEnabled.setChecked(draftSettings.getBoolean("homeEnabled",settings().getBoolean("homeEnabled",false)));
+            editHomeSsid.setText(draftSettings.getString("homeSsid",settings().getString("homeSsid","")));
+            editHomeNas.setText(draftSettings.getString("homeNas",settings().getString("homeNas","")));
+            editHomePort.setText(draftSettings.getString("homePort",String.valueOf(settings().getInt("homePort",7890))));
             network.setText(draftSettings.getString("network",""));gateway.setText(draftSettings.getString("gateway",""));
             port.setText(draftSettings.getString("port","7890"));moons.setText(draftSettings.getString("moons",""));draftSettings=null;
         }
@@ -322,11 +356,41 @@ public final class MainActivity extends Activity {
                 String nas=gateway.getText().toString().trim(); ConnectionSettings.ipv4(nas);
                 int number=Integer.parseInt(port.getText().toString().trim()); if(number<1||number>65535) throw new IllegalArgumentException(getString(R.string.ui_068_choose_a_port_from_1_to_65535));
                 String moon=MoonSettings.format(MoonSettings.parse(moons.getText().toString()));
-                settings().edit().putString("network",net).putString("gateway",nas).putInt("port",number).putString("moons",moon).apply(); dialog.dismiss(); render();
+                String homeSsid=editHomeSsid.getText().toString(),homeNas=editHomeNas.getText().toString().trim();
+                int homePort=homeEnabled.isChecked()?Integer.parseInt(editHomePort.getText().toString().trim()):settings().getInt("homePort",7890);
+                HomeNetworkSettings.validate(homeEnabled.isChecked(),homeSsid,homeNas,homePort);
+                settings().edit().putBoolean("homeEnabled",homeEnabled.isChecked()).putString("homeSsid",homeSsid).putString("homeNas",homeNas).putInt("homePort",homePort)
+                    .putString("network",net).putString("gateway",nas).putInt("port",number).putString("moons",moon).apply(); dialog.dismiss(); render();
             } catch(Exception e) { Toast.makeText(this,AppLanguage.inputError(this,e),Toast.LENGTH_LONG).show(); }
         })); dialog.show();
         ((View)dialog.getButton(AlertDialog.BUTTON_POSITIVE).getParent()).setVisibility(View.GONE);
         if(dialog.getWindow()!=null) {dialog.getWindow().setLayout(-1,-1);dialog.getWindow().setDimAmount(0f);dialog.getWindow().setStatusBarColor(paper);dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(paper));}
+    }
+    private void readHomeNetwork() {
+        android.net.ConnectivityManager cm=getSystemService(android.net.ConnectivityManager.class);
+        StringBuilder info=new StringBuilder(); boolean found=false;
+        for(android.net.Network network:cm.getAllNetworks()) {
+            android.net.NetworkCapabilities caps=cm.getNetworkCapabilities(network);
+            if(caps==null || !caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) || caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN)) continue;
+            found=true;String name=CurrentNetworkReader.ssid(this,network);
+            info.append(getString(R.string.home_ssid)).append(": ").append(name.isEmpty()?getString(R.string.home_ssid_unavailable):name).append("\n");
+            if(!name.isEmpty() && !TunnelService.alive) {
+                if(editHomeSsid.getText().length()==0) editHomeSsid.setText(name);
+                else if(!name.equals(editHomeSsid.getText().toString())) new AlertDialog.Builder(this).setTitle(R.string.home_use_name).setMessage(name)
+                    .setPositiveButton(R.string.home_use_name,(dialog,which) -> { if(!TunnelService.alive) editHomeSsid.setText(name); })
+                    .setNegativeButton(android.R.string.cancel,null).show();
+            }
+            android.net.LinkProperties links=cm.getLinkProperties(network);
+            if(links==null) continue;
+            for(android.net.LinkAddress ip:links.getLinkAddresses()) if(ip.getAddress() instanceof java.net.Inet4Address) {
+                int mask=ip.getPrefixLength()==0?0:-1 << (32-ip.getPrefixLength());
+                String dotted=((mask>>>24)&255)+"."+((mask>>>16)&255)+"."+((mask>>>8)&255)+"."+(mask&255);
+                info.append(getString(R.string.home_local_ip)).append(": ").append(ip.getAddress().getHostAddress()).append("\n").append(getString(R.string.home_mask)).append(": ").append(dotted).append("\n");
+            }
+            for(android.net.RouteInfo route:links.getRoutes()) if(route.isDefaultRoute() && route.getGateway() instanceof java.net.Inet4Address)
+                info.append(getString(R.string.home_gateway)).append(": ").append(route.getGateway().getHostAddress()).append("\n");
+        }
+        homeNetworkInfo.setText(found?info.toString()+getString(R.string.home_permission_help):getString(R.string.home_no_wifi));
     }
     private boolean moonSnapshotFresh() {
         long checked=status().getLong("moonCheckedAt",0),age=SystemClock.elapsedRealtime()-checked;

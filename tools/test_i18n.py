@@ -3,7 +3,11 @@ import pathlib,re,xml.etree.ElementTree as ET
 root=pathlib.Path(__file__).resolve().parents[1]/'app/src/main/res'
 a=ET.parse(root/'values/strings.xml').getroot()
 b=ET.parse(root/'values-zh-rCN/strings.xml').getroot()
-def strings(tree):return {x.attrib['name']:''.join(x.itertext()) for x in tree.findall('string')}
+def strings(tree):
+    items=tree.findall('string')
+    result={x.attrib['name']:''.join(x.itertext()) for x in items}
+    assert len(result)==len(items), 'Duplicate string resource names'
+    return result
 en,zh=strings(a),strings(b)
 assert en.keys()==zh.keys(), 'Translation keys differ'
 for key in en:
