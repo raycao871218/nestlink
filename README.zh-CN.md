@@ -16,6 +16,8 @@
 2. 在 App 设置中扫码，或填写网络 ID、NAS 的 ZeroTier IPv4 地址和检测端口；Moon 可选。
 3. 点击连接，允许 VPN，并在 ZeroTier Controller 授权新设备。
 
+自建根服务器可在设置中导入二进制 `planet` 文件（最多 16 KiB），或恢复内置 Planet。Android 需先断开；iPad 需先暂停连接和自动切换。点击保存后下次连接生效，取消不修改。文件仅保存在本机，不随入网二维码分享；设备身份保持不变。
+
 NAS TCP 与 HTTPS 检测均通过后显示已连接；检测结果仅代表指定服务和测试站点当时可达。
 
 ```text

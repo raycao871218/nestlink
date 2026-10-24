@@ -140,16 +140,28 @@ public final class TunnelService extends VpnService {
             while((size=input.read(buffer))!=-1) { output.write(buffer,0,size); if(output.size()>4096) throw new IOException("内置根节点定义过大"); }
             candidate=output.toByteArray();
         }
+        BootstrapPolicy.shouldInstall(null,candidate);
+        String custom=getSharedPreferences("connection",0).getString("customPlanet","");
+        byte[] selected=custom.isEmpty()?candidate:android.util.Base64.decode(custom,android.util.Base64.DEFAULT);
+        PlanetSettings.validate(selected);
+        String revision=getSharedPreferences("connection",0).getString("planetRevision","");
+        String selection=BootstrapPolicy.hash(selected)+(revision.isEmpty()?"":":"+revision);
+        File marker=new File(store,"planet.selection");
+        String applied=marker.isFile()?new String(Files.readAllBytes(marker.toPath()),java.nio.charset.StandardCharsets.UTF_8):null;
         byte[] current=planet.isFile()?Files.readAllBytes(planet.toPath()):null;
-        if(!BootstrapPolicy.shouldInstall(current,candidate)) return;
-        if(current!=null) {
-            File backup=new File(store,"planet.before-bootstrap-migration");
-            if(!backup.exists()) Files.write(backup.toPath(),current);
+        if(PlanetSettings.shouldReplace(applied,selection,!custom.isEmpty(),current,candidate)) {
+            if(current!=null) {
+                File backup=new File(store,"planet.before-bootstrap-migration");
+                if(!backup.exists()) Files.write(backup.toPath(),current);
+            }
+            writeBootstrap(planet,selected);
         }
-        android.util.AtomicFile atomic=new android.util.AtomicFile(planet); FileOutputStream output=null;
-        try { output=atomic.startWrite(); output.write(candidate); atomic.finishWrite(output); }
+        writeBootstrap(marker,selection.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+    private void writeBootstrap(File file,byte[] bytes) throws IOException {
+        android.util.AtomicFile atomic=new android.util.AtomicFile(file); FileOutputStream output=null;
+        try { output=atomic.startWrite(); output.write(bytes); atomic.finishWrite(output); }
         catch(IOException e) { if(output!=null) atomic.failWrite(output); throw e; }
-        getSharedPreferences("status",0).edit().putString("bootstrap","已安装经 NAS 验证可用的根节点定义").apply();
     }
     private void updateDiagnostics() {
         if(stopping || node==null || !getSharedPreferences("connection",0).getBoolean("developer",false)) return;

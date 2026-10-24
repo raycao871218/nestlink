@@ -159,4 +159,12 @@
     <string name="home_failed">Home NAS proxy failed. Check the NAS address, SOCKS5 port and Wi-Fi connection, then reconnect.</string>
     <string name="home_degraded">Home proxy checks failed; retrying. Check that the NAS SOCKS5 service supports TCP and UDP.</string>
     <string name="home_use_name">Use this Wi-Fi name</string>
+    <string name="planet_import">Import planet file</string>
+    <string name="planet_reset">Restore built-in Planet</string>
+    <string name="planet_builtin">Planet: built-in</string>
+    <string name="planet_custom">Planet: custom</string>
+    <string name="planet_help">Import a binary planet file from your root server administrator (up to 16 KiB). Save to apply on the next connection. Planet stays on this device and is excluded from QR codes.</string>
+    <string name="planet_invalid">Cannot read a valid Planet file (up to 16 KiB). Moon files are not supported.</string>
+    <string name="planet_disconnect">Disconnect before changing Planet.</string>
+    <string name="planet_picker_unavailable">No file picker is available.</string>
 </resources>

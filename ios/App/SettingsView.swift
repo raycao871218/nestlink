@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import SwiftUI
+import UniformTypeIdentifiers
+import CryptoKit
 
 struct SettingsView: View {
     @ObservedObject var vpn: VPNController
@@ -8,6 +10,7 @@ struct SettingsView: View {
     @AppStorage("developer") private var developer = false
     @State private var draft = ConnectionSettings()
     @State private var error: String?
+    @State private var importingPlanet = false
     @State private var scanning = false
     @State private var showingCode = false
     @State private var code = ""
@@ -56,6 +59,19 @@ struct SettingsView: View {
                         LabeledContent(tr("在家与外出", language), value: tr(draft.home.enabled ? "自动切换" : "手动连接", language))
                     }.accessibilityIdentifier("settings.homeRouting")
                 }
+                Section {
+                    Text(tr(draft.customPlanet.isEmpty ? "Planet：内置" : "Planet：自定义", language))
+                    if let data = Data(base64Encoded: draft.customPlanet), !data.isEmpty {
+                        Text("SHA-256 " + SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined().prefix(12))
+                            .font(.caption.monospaced()).foregroundStyle(.secondary)
+                    }
+                    Button(tr("导入 planet 文件", language)) { importingPlanet = true }
+                        .disabled(vpn.serviceEnabled || vpn.busy).accessibilityIdentifier("settings.planet.import")
+                    Button(tr("恢复内置 Planet", language)) { draft.customPlanet = ""; draft.planetRevision = UUID().uuidString }
+                        .disabled(vpn.serviceEnabled || vpn.busy).accessibilityIdentifier("settings.planet.reset")
+                } header: { Text("Planet") } footer: {
+                    Text(tr("从根服务器管理员处获取二进制 planet 文件（最多 16 KiB）。保存后下次连接生效。Planet 仅保存在本机，不随二维码分享。", language))
+                }
                 Section(tr("入网二维码", language)) {
                     Button { scanning = true } label: { Label(tr("扫码入网", language), systemImage: "qrcode.viewfinder") }
                     Button {
@@ -96,11 +112,12 @@ struct SettingsView: View {
                 ToolbarItem(placement: .cancellationAction) { Button(tr("取消", language)) { dismiss() }.accessibilityIdentifier("settings.cancel") }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(tr("保存", language)) {
+                        guard !vpn.serviceEnabled, !vpn.busy else { return }
                         do {
                             try draft.validate(); draft.moons = try MoonEntry.canonical(draft.moons); vpn.settings = draft
                             UserDefaults.standard.set(draft.dictionary, forKey: "connection"); dismiss()
                         } catch { self.error = error.localizedDescription }
-                    }.disabled(vpn.serviceEnabled).accessibilityIdentifier("settings.save")
+                    }.disabled(vpn.serviceEnabled || vpn.busy).accessibilityIdentifier("settings.save")
                 }
             }
             .onAppear { if !loaded { draft = vpn.settings; loaded = true } }
@@ -109,6 +126,16 @@ struct SettingsView: View {
             }
             .onChange(of: vpn.serviceEnabled) { _, active in
                 if !active, let payload = applyAfterDisconnect { draft = payload.applying(to: draft); applyAfterDisconnect = nil }
+            }
+            .fileImporter(isPresented: $importingPlanet, allowedContentTypes: [.item]) { result in
+                do {
+                    guard !vpn.serviceEnabled, !vpn.busy else { throw SettingsError.message("暂停连接和自动切换后可编辑设置。") }
+                    let url = try result.get()
+                    let scoped = url.startAccessingSecurityScopedResource()
+                    defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                    draft.customPlanet = try PlanetSettings.read(url).base64EncodedString()
+                    draft.planetRevision = UUID().uuidString
+                } catch { self.error = error.localizedDescription }
             }
             .sheet(isPresented: $showingCode) { JoinCodeView(payload: code, language: language) }
             .alert(tr("检查连接设置", language), isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {

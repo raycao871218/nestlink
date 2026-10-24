@@ -83,6 +83,6 @@ ZeroTier 身份保存在扩展自身的 Application Support 中，目录排除�
 
 App 使用系统 `NETunnelProviderManager` 保存连接参数，并通过 provider message 读取公开状态；不共享身份文件，不需要 App Group。所有核心 API、UDP 接收和 IPv4／ARP 操作在同一串行队列执行；主界面的轮询不驱动隧道生命周期。
 
-Planet 使用与 Android 相同的资源，启动时验证 SHA-256；仅在扩展存储中不存在时安装，不覆盖已有定义。
+Planet 默认使用与 Android 相同的资源，启动时验证 SHA-256。设置支持导入二进制 `planet` 文件（最多 16 KiB）和恢复内置 Planet；需先暂停连接与自动切换，保存后下次连接生效。自定义文件通过 VPN 配置传入扩展，不随入网二维码分享。仅切换所选定义或文件缺失时安装，普通重连保留 ZeroTier 更新的根定义，不修改设备身份。
 
 许可沿用仓库 [LICENSE](../LICENSE) 和 [THIRD_PARTY.md](../THIRD_PARTY.md)。上架前另行核对 VPN 审核、许可与加密出口申报要求。

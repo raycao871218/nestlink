@@ -159,4 +159,12 @@
     <string name="home_failed">家庭 NAS 代理连接失败。请检查 NAS 地址、SOCKS5 端口及 Wi-Fi 连接后重试。</string>
     <string name="home_degraded">家庭代理检测未通过，正在重试。请检查 NAS SOCKS5 服务是否支持 TCP 和 UDP。</string>
     <string name="home_use_name">使用此 Wi-Fi 名称</string>
+    <string name="planet_import">导入 planet 文件</string>
+    <string name="planet_reset">恢复内置 Planet</string>
+    <string name="planet_builtin">Planet：内置</string>
+    <string name="planet_custom">Planet：自定义</string>
+    <string name="planet_help">从根服务器管理员处获取二进制 planet 文件（最多 16 KiB）。保存后下次连接生效。Planet 仅保存在本机，不随二维码分享。</string>
+    <string name="planet_invalid">无法读取有效的 Planet 文件（最多 16 KiB），不支持 Moon 文件。</string>
+    <string name="planet_disconnect">请先断开连接再修改 Planet。</string>
+    <string name="planet_picker_unavailable">系统文件选择器不可用。</string>
 </resources>

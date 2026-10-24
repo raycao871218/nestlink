@@ -1,5 +1,9 @@
 # iPad 原型验证记录
 
+## 2026-10-24：自定义 Planet（待 Xcode 验收）
+
+已增加设置草稿中的文件导入、恢复内置、格式校验及传入 Packet Tunnel 的加载逻辑，补充了 Planet 校验、配置往返、二维码排除和切换策略测试。本次环境为 Windows，未执行 iPad 编译及 Swift 测试。需在 Mac 运行 `tools/test_ios.sh` 并构建；真机验收文件选择、取消不保存、自定义根节点连接、重连保留更新、恢复内置及设备 ID 不变。下文历史验证结果不覆盖本次新增功能。
+
 ## Build 15：家庭本地 VPN 直连
 
 替代 Build 13 的手动家庭网关方案。家庭 SSID 匹配时直接使用 NAS SOCKS5，保留 VPN 图标但不创建 ZeroTier 节点；外出沿用原 ZeroTier 引擎。无需固定 iPad IP、修改 Wi-Fi 网关或 DNS。先前临时增加的 NAS 单客户端规则已撤销，原 ZeroTier 规则保留。

@@ -30,6 +30,8 @@ public final class MainActivity extends Activity {
     private Switch homeEnabled;
     private TextView homeNetworkInfo;
     private AlertDialog settingsDialog;
+    private String customPlanet="",planetRevision="";
+    private TextView planetSummary;
     private Button moonSummary;
     private AlertDialog moonDialog;
     private LinearLayout moonRows;
@@ -191,6 +193,19 @@ public final class MainActivity extends Activity {
     @Override protected void onActivityResult(int request,int result,Intent data) {
         super.onActivityResult(request,result,data);
         if(request==41 && result==RESULT_OK) startTunnel();
+        if(request==64) {
+            if(result==RESULT_OK && data!=null && data.getData()!=null) {
+                try {
+                    if(TunnelService.alive) throw new IllegalStateException(getString(R.string.planet_disconnect));
+                    byte[] bytes;
+                    try(java.io.InputStream input=getContentResolver().openInputStream(data.getData())) { bytes=PlanetSettings.read(input); }
+                    if(draftSettings==null) draftSettings=new Bundle();
+                    draftSettings.putString("customPlanet",android.util.Base64.encodeToString(bytes,android.util.Base64.NO_WRAP));
+                    draftSettings.putString("planetRevision",java.util.UUID.randomUUID().toString());
+                } catch(Exception e) { Toast.makeText(this,getString(R.string.planet_invalid),Toast.LENGTH_LONG).show(); }
+            }
+            showSettings();
+        }
         if(request==63) {
             showSettings();
             if(result==RESULT_OK && data!=null) {
@@ -201,7 +216,7 @@ public final class MainActivity extends Activity {
     }
     private void captureDraft() {
         if(editNetwork==null) return;
-        draftSettings=new Bundle();draftSettings.putString("network",editNetwork.getText().toString());
+        draftSettings=new Bundle();draftSettings.putString("customPlanet",customPlanet);draftSettings.putString("planetRevision",planetRevision);draftSettings.putString("network",editNetwork.getText().toString());
         draftSettings.putString("gateway",editGateway.getText().toString());draftSettings.putString("port",editPort.getText().toString());
         draftSettings.putString("moons",editMoons.getText().toString());
         if(editHomeSsid!=null) { draftSettings.putString("homeSsid",editHomeSsid.getText().toString()); draftSettings.putString("homeNas",editHomeNas.getText().toString()); draftSettings.putString("homePort",editHomePort.getText().toString()); draftSettings.putBoolean("homeEnabled",homeEnabled.isChecked()); }
@@ -309,6 +324,21 @@ public final class MainActivity extends Activity {
             public void onTextChanged(CharSequence value,int start,int before,int count) {updateMoonSummary();}
             public void afterTextChanged(android.text.Editable value) {}
         });updateMoonSummary();
+        customPlanet=draftSettings!=null?draftSettings.getString("customPlanet",settings().getString("customPlanet","")):settings().getString("customPlanet","");
+        planetRevision=draftSettings!=null?draftSettings.getString("planetRevision",settings().getString("planetRevision","")):settings().getString("planetRevision","");
+        planetSummary=text("",13,muted);add(body,planetSummary,16);updatePlanetSummary();
+        Button importPlanet=button(getString(R.string.planet_import),paper,ink);
+        Button resetPlanet=button(getString(R.string.planet_reset),paper,ink);
+        add(body,importPlanet,8);add(body,resetPlanet,8);
+        add(body,text(getString(R.string.planet_help),12,muted),8);
+        importPlanet.setEnabled(!TunnelService.alive);resetPlanet.setEnabled(!TunnelService.alive);
+        importPlanet.setOnClickListener(v -> {
+            if(TunnelService.alive) return;
+            captureDraft();settingsDialog.dismiss();
+            try { startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"),64); }
+            catch(ActivityNotFoundException e) { showSettings();Toast.makeText(this,R.string.planet_picker_unavailable,Toast.LENGTH_LONG).show(); }
+        });
+        resetPlanet.setOnClickListener(v -> { if(!TunnelService.alive) {customPlanet="";planetRevision=java.util.UUID.randomUUID().toString();updatePlanetSummary();} });
         homeEnabled=new Switch(this);homeEnabled.setText(R.string.home_enable);homeEnabled.setTextColor(ink);homeEnabled.setTextSize(19);
         homeEnabled.setChecked(settings().getBoolean("homeEnabled",false));add(body,homeEnabled,18);
         homeNetworkInfo=text(getString(R.string.home_permission_help),13,muted);add(body,homeNetworkInfo,8);
@@ -360,11 +390,14 @@ public final class MainActivity extends Activity {
                 int homePort=homeEnabled.isChecked()?Integer.parseInt(editHomePort.getText().toString().trim()):settings().getInt("homePort",7890);
                 HomeNetworkSettings.validate(homeEnabled.isChecked(),homeSsid,homeNas,homePort);
                 settings().edit().putBoolean("homeEnabled",homeEnabled.isChecked()).putString("homeSsid",homeSsid).putString("homeNas",homeNas).putInt("homePort",homePort)
-                    .putString("network",net).putString("gateway",nas).putInt("port",number).putString("moons",moon).apply(); dialog.dismiss(); render();
+                    .putString("customPlanet",customPlanet).putString("planetRevision",planetRevision).putString("network",net).putString("gateway",nas).putInt("port",number).putString("moons",moon).apply(); dialog.dismiss(); render();
             } catch(Exception e) { Toast.makeText(this,AppLanguage.inputError(this,e),Toast.LENGTH_LONG).show(); }
         })); dialog.show();
         ((View)dialog.getButton(AlertDialog.BUTTON_POSITIVE).getParent()).setVisibility(View.GONE);
         if(dialog.getWindow()!=null) {dialog.getWindow().setLayout(-1,-1);dialog.getWindow().setDimAmount(0f);dialog.getWindow().setStatusBarColor(paper);dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(paper));}
+    }
+    private void updatePlanetSummary() {
+        planetSummary.setText(customPlanet.isEmpty()?getString(R.string.planet_builtin):getString(R.string.planet_custom)+" · SHA-256 "+BootstrapPolicy.hash(android.util.Base64.decode(customPlanet,android.util.Base64.DEFAULT)).substring(0,12));
     }
     private void readHomeNetwork() {
         android.net.ConnectivityManager cm=getSystemService(android.net.ConnectivityManager.class);

@@ -7,12 +7,14 @@ struct ConnectionSettings: Equatable {
     var gateway = ""
     var port = "7890"
     var moons = ""
+    var customPlanet = ""
+    var planetRevision = ""
     var home = HomeNetworkSettings()
 
     var dictionary: [String: Any] {
         ["network": network.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
          "gateway": gateway.trimmingCharacters(in: .whitespacesAndNewlines),
-         "port": Int(port) ?? 0, "moons": moons, "home": home.dictionary]
+         "port": Int(port) ?? 0, "moons": moons, "customPlanet": customPlanet, "planetRevision": planetRevision, "home": home.dictionary]
     }
 
     init(network: String = "", gateway: String = "", port: String = "7890", moons: String = "") {
@@ -23,6 +25,8 @@ struct ConnectionSettings: Equatable {
         gateway = dictionary["gateway"] as? String ?? ""
         port = String(dictionary["port"] as? Int ?? 7890)
         moons = dictionary["moons"] as? String ?? ""
+        customPlanet = dictionary["customPlanet"] as? String ?? ""
+        planetRevision = dictionary["planetRevision"] as? String ?? ""
         home = HomeNetworkSettings(dictionary: dictionary["home"] as? [String: Any] ?? [:])
     }
     func validate() throws {
@@ -43,6 +47,12 @@ struct ConnectionSettings: Equatable {
         }
         _ = try parsedMoons()
         try home.validate()
+        if !customPlanet.isEmpty {
+            guard customPlanet.utf8.count <= 21848, let data = Data(base64Encoded: customPlanet) else {
+                throw SettingsError.message("无法读取有效的 Planet 文件（最多 16 KiB），不支持 Moon 文件。")
+            }
+            try PlanetSettings.validate(data)
+        }
     }
     func parsedMoons() throws -> [[String: String]] {
         var entries: [UInt64: UInt64] = [:]

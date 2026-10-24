@@ -22,6 +22,8 @@ Connected status requires both NAS TCP and HTTPS checks to pass. These checks co
 Device → NestLink VPN → ZeroTier → NAS → Home LAN / Internet
 ```
 
+Custom root servers: import a binary `planet` file (up to 16 KiB) or restore the built-in Planet in settings on Android and iPad. Disconnect first; on iPad also disable automatic switching. Save to apply on the next connection; cancel discards changes. The file stays on this device, is excluded from join QR codes, and preserves the device identity.
+
 ## Build Android
 
 Requires JDK 17, Gradle 8.8, Android SDK / Build Tools 34, NDK 27.2.12479018 and CMake 3.22.1.

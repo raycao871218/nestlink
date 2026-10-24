@@ -141,6 +141,28 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             }
         }
         let store = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("ZeroTier", isDirectory: true)
+        try FileManager.default.createDirectory(at: store, withIntermediateDirectories: true,
+                                               attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
+        var excludedStore = store
+        var resourceValues = URLResourceValues(); resourceValues.isExcludedFromBackup = true
+        try excludedStore.setResourceValues(resourceValues)
+        let selected: Data
+        if settings.customPlanet.isEmpty { selected = try Data(contentsOf: planet) }
+        else {
+            guard let data = Data(base64Encoded: settings.customPlanet) else { throw SettingsError.message("无法读取有效的 Planet 文件（最多 16 KiB），不支持 Moon 文件。") }
+            selected = data
+        }
+        try PlanetSettings.validate(selected)
+        let selection = SHA256.hash(data: selected).map { String(format: "%02x", $0) }.joined()
+            + (settings.planetRevision.isEmpty ? "" : ":" + settings.planetRevision)
+        let seed = store.appendingPathComponent("planet")
+        let marker = store.appendingPathComponent("planet.selection")
+        let applied = try? String(contentsOf: marker, encoding: .utf8)
+        if PlanetSettings.shouldReplace(applied: applied, selected: selection, custom: !settings.customPlanet.isEmpty,
+                                        exists: FileManager.default.fileExists(atPath: seed.path)) {
+            try selected.write(to: seed, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+        }
+        try selection.write(to: marker, atomically: true, encoding: .utf8)
         try engine.start(withNetwork: settings.dictionary["network"] as! String,
                          gateway: settings.dictionary["gateway"] as! String,
                          moons: settings.parsedMoons(), store: store, planet: planet)

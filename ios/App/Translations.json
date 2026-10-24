@@ -189,5 +189,11 @@
   "无法读取或匹配 Wi-Fi 名称时使用 ZeroTier。家庭代理故障会提示错误，不会把普通直连误报为代理可用。": "If the Wi-Fi name cannot be read or matched, ZeroTier is used. Home proxy failures are reported; ordinary internet access is not treated as a working proxy.",
   "家庭直连 · 通过局域网 NAS 代理上网，ZeroTier 未运行。": "Home connection · Using the NAS proxy over Wi-Fi. ZeroTier is off.",
   "开启后，在家直连 NAS 代理，外出通过 ZeroTier 回家。": "Connect directly to the NAS proxy at home; use ZeroTier when away.",
-  "家庭 NAS 代理端口必须在 1–65535 之间": "Home NAS proxy port must be between 1 and 65535."
+  "家庭 NAS 代理端口必须在 1–65535 之间": "Home NAS proxy port must be between 1 and 65535.",
+  "Planet：内置": "Planet: built-in",
+  "Planet：自定义": "Planet: custom",
+  "导入 planet 文件": "Import planet file",
+  "恢复内置 Planet": "Restore built-in Planet",
+  "无法读取有效的 Planet 文件（最多 16 KiB），不支持 Moon 文件。": "Cannot read a valid Planet file (up to 16 KiB). Moon files are not supported.",
+  "从根服务器管理员处获取二进制 planet 文件（最多 16 KiB）。保存后下次连接生效。Planet 仅保存在本机，不随二维码分享。": "Import a binary planet file from your root server administrator (up to 16 KiB). Save to apply on the next connection. Planet stays on this device and is excluded from QR codes."
 }

@@ -8,8 +8,34 @@ struct SettingsTests {
         func rejected(_ settings: ConnectionSettings) {
             do { try settings.validate(); fatalError("Invalid settings accepted") } catch {}
         }
+        let planet = try Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[1]))
+        try PlanetSettings.validate(planet)
+        func rejectPlanet(_ data: Data) {
+            do { try PlanetSettings.validate(data); fatalError("Invalid Planet accepted") } catch {}
+        }
+        for size in 0..<planet.count { rejectPlanet(Data(planet.prefix(size))) }
+        rejectPlanet(Data(repeating: 0, count: PlanetSettings.maxSize + 1))
+        var moonFile = planet; moonFile[0] = 2; rejectPlanet(moonFile)
+        var trailing = planet; trailing.append(0); rejectPlanet(trailing)
+        var wrongRoots = planet; wrongRoots[177] = 5; rejectPlanet(wrongRoots)
+        assert(PlanetSettings.shouldReplace(applied: nil, selected: "custom", custom: true, exists: true))
+        assert(!PlanetSettings.shouldReplace(applied: "custom", selected: "custom", custom: true, exists: true))
+        assert(PlanetSettings.shouldReplace(applied: "custom", selected: "builtin", custom: false, exists: true))
+        assert(PlanetSettings.shouldReplace(applied: "builtin", selected: "builtin", custom: false, exists: false))
+        assert(!PlanetSettings.shouldReplace(applied: nil, selected: "builtin", custom: false, exists: true))
+        assert(PlanetSettings.shouldReplace(applied: nil, selected: "builtin:reset", custom: false, exists: true))
+        assert(PlanetSettings.shouldReplace(applied: "builtin", selected: "builtin:reset", custom: false, exists: true))
         let valid = ConnectionSettings(network: "0123456789abcdef", gateway: "10.1.2.1")
         try valid.validate()
+        var custom = valid; custom.customPlanet = planet.base64EncodedString(); custom.planetRevision = "test-import"
+        try custom.validate()
+        assert(ConnectionSettings(dictionary: custom.dictionary) == custom)
+        let customQR = try QRPayload.encode(custom)
+        assert(!customQR.contains(custom.customPlanet))
+        let reapplied = try QRPayload.parse(customQR).applying(to: custom)
+        assert(reapplied.customPlanet == custom.customPlanet)
+        var invalidPlanet = valid; invalidPlanet.customPlanet = "invalid"; rejected(invalidPlanet)
+        print("Planet validation, import/reset selection, persistence and QR exclusion: PASS")
         assert(ConnectionSettings(dictionary: valid.dictionary) == valid)
         rejected(ConnectionSettings(network: "0000000000000000", gateway: "10.1.2.1"))
         rejected(ConnectionSettings(network: "+123456789abcdef", gateway: "10.1.2.1"))
